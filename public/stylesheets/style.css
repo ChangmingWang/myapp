@@ -1,0 +1,9 @@
+body {
+  text-align:center;
+  font: 24px "Lucida Grande", Helvetica, Arial, sans-serif;
+  /*font-style:italic;*/
+}
+
+a {
+  color: #00B7FF;
+}

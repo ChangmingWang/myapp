@@ -1,0 +1,182 @@
+<html>
+  <head>
+    <title>
+        My Canvas
+    </title>
+  </head>
+    
+  <body>
+    
+    <form>
+    <!-- 设置画布的高和宽 -->
+    canvas width:
+    <input type="text" id="width" style="width:60px;" value="650">
+    &nbsp
+    canvas height:
+    <input type="text" id="height" style="width:60px;" value="400">
+    &nbsp
+    lineWidth:
+    <input type="text" id="lineWidth" style="width:50px;" value="1">
+    &nbsp
+    <!-- 带颜色值的下拉菜单 -->
+    Color:
+    <select name="Color" id="Color">
+    <option value="rgb(255,0,0)" selected="red">red</option>
+    <option value="rgb(0,255,0)">green</option>
+    <option value="rgb(0,0,255)">blue</option>
+    </select>
+    &nbsp
+    </form>
+    
+    <form>
+    <!-- 带图形分类的下拉菜单 -->
+    feature:
+    <select name="feature" id="feature">
+    <option value="" selected=""></option>
+    <option value="line" onclick="Dis_rec()">line</option>
+    <option value="rec" onclick="Dis_line()">rectangle</option>
+    </select>
+    &nbsp
+
+    <!-- 带笔触分类的下拉菜单 -->
+    lineCap:
+    <select name="lineCap" id="lineCap">
+    <option value="butt" selected="butt">butt</option>
+    <option value="square">square</option>
+    <option value="round">round</option>
+    </select>
+    &nbsp
+
+    <!-- 矩形直角类型的下拉菜单 -->
+    lineJoin:
+    <select name="lineJoin" id="lineJoin">
+    <option value="miter" selected="miter">miter</option>
+    <option value="bevel">bevel</option>
+    <option value="round">round</option>
+    </select>
+    &nbsp
+        
+    <input type="button" onclick="setCanvas()" value="set">
+    &nbsp
+    <input type="submit" onclick="clearCanvas()" value="refresh">
+    </form>
+    <br><br>
+    
+    <!-- 画布 -->
+    <canvas id="myCanvas" width="650" height="400" style="border:1px dashed black;" ></canvas>
+
+    <script type="text/javascript">
+    var c=document.getElementById("myCanvas");
+    var ctx=c.getContext("2d");
+
+    // 禁用矩形参数lineJoin
+    function Dis_rec()
+    {
+      document.getElementById("lineJoin").disabled=true;
+      document.getElementById("lineCap").disabled=false;  
+    }
+
+    // 禁用直线参数lineCap
+    function Dis_line()
+    {
+      document.getElementById("lineCap").disabled=true;
+      document.getElementById("lineJoin").disabled=false;  
+    }
+
+    // 设置与画布相关参数的函数
+    function setCanvas()
+    {
+      //ctx.restore();
+      c.width=document.getElementById("width").value;
+      c.height=document.getElementById("height").value;
+      
+      if(document.getElementById("feature").value!="")
+      {
+        if(document.getElementById("lineCap").disabled==false)
+        {
+          draw_line();
+		      ctx.save();
+        }
+        if(document.getElementById("lineJoin").disabled==false)
+        {
+          draw_rec();
+		      ctx.save();
+        }
+      }
+    }
+
+    // 刷新画布的函数
+    function clearCanvas()
+    {
+      var c=document.getElementById("myCanvas");
+      var ctx=c.getContext("2d");
+    }
+    
+    var oX,oY;
+    var flag = false;
+    
+    //加载画线函数
+    function draw_line()
+    {
+      c.onmousedown = function(e)
+		  {
+        ctx.beginPath();
+        var e=e || window.event; //兼容FF等MOZ浏览器
+        ctx.moveTo( e.offsetX, e.offsetY);
+        c.onmousemove = function(e)
+				{
+          var e = e || window.event;
+          ctx.lineTo( e.offsetX, e.offsetY);
+		      ctx.lineWidth = document.getElementById("lineWidth").value;
+          ctx.strokeStyle = document.getElementById("Color").value;		  
+          ctx.lineCap = document.getElementById("lineCap").value;
+          ctx.stroke();
+        }
+        c.onmouseup = function()
+				{
+          ctx.closePath();  //闭合路径
+		  
+          c.onmousemove = null;
+          c.onmouseup = null;
+        }
+      }        
+    }
+    function draw_rec()
+    {
+      c.onmousedown = function(e)
+			{
+        ctx.beginPath();
+        ctx.moveTo( X0, Y0);
+        var e=e || window.event; //兼容FF等MOZ浏览器
+			  var X0=e.offsetX,Y0=e.offsetY
+        c.onmousemove = function(e)
+			  {
+          var e = e || window.event;
+        }
+        c.onmouseup = function(e)
+				{
+          var e = e || window.event;
+		      ctx.fillStyle = document.getElementById("Color").value;
+		      ctx.lineJoin = document.getElementById("lineJoin").value;
+		      //ctx.lineTo( e.offsetX, Y0); 
+		      //ctx.lineTo( e.offsetX, e.offsetY); 
+		      //ctx.lineTo( X0, e.offsetY); 
+		      //ctx.lineTo( X0, Y0); 
+
+          ctx.strokeStyle = 'black';
+          ctx.strokeRect( X0,  Y0, e.offsetX-X0, e.offsetY-Y0);
+          ctx.closePath();  //闭合路径
+          ctx.stroke();
+		  
+		      ctx.rect( X0,  Y0, e.offsetX-X0, e.offsetY-Y0);
+          ctx.fill();
+		  		  
+          c.onmousemove = null;
+          c.onmouseup = null;
+        }
+      }
+    }
+    
+    </script>
+  </body>
+</html>
