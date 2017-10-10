@@ -1,0 +1,264 @@
+<html>
+  <head>
+      <title>
+          vault horse/跳马
+      </title>
+  </head>
+
+<body>
+  <div>
+    chess row:
+    <input type="text" id="row" onchange="change()">
+  </div>
+  <div>
+    chess col:
+    <input type="text" id="col" onchange="change()">
+  </div>
+
+  <div>
+    start y:
+      <input type="text" id="y0">
+    </div>
+  <div>
+    start x:
+      <input type="text" id="x0">
+  </div>    
+
+<input type="button" onclick="vault()" value="set">
+
+  <p id="ans"></p>
+
+
+<script>
+  var y1,x1;
+  var step = 1;  //跳马轨迹的步数
+  var num = 0;  //跳法总数
+
+  function change()
+  {
+    num = 0;
+  }
+
+  //next函数的x2,y2,bool	
+  function createObject(y2, x2, bool)
+  {
+    var object = new Object();
+    object.y2 = y2;
+    object.x2 = x2;
+    object.next = bool;
+    return object;
+  }
+  var obj =createObject(0,0,false);
+
+  //判断下一步的走向
+  function next(y2,x2,flag,row,col,track,Y,X)
+  {
+    switch(flag)
+    {
+	  case 0:
+        if(InTable(y2-2,x2-1,row,col) && !track[y2-2][x2-1])
+        {
+          y2-=2;
+          x2--;
+          obj.y2 = y2;
+          obj.x2 = x2;
+          obj.next = true;
+        }
+        else 
+        {
+          obj.next = false;
+        }
+        break;
+      case 1:
+        if(InTable(y2-1,x2-2,row,col) && !track[y2-1][x2-2])
+        {
+          y2--;
+          x2-=2;
+          obj.y2 = y2;
+          obj.x2 = x2;
+          obj.next = true;
+        }
+        else 
+        {
+          obj.next = false;
+        }
+        break;
+      case 2:
+        if(InTable(y2+1,x2-2) && !track[y2+1][x2-2])
+        {
+          y2++;
+          x2-=2;
+          obj.y2 = y2;
+        obj.x2 = x2;
+          obj.next = true;
+        } 
+        else 
+        {
+          obj.next = false;
+        }
+      break;
+	case 3:
+      if(InTable(y2+2,x2-1,row,col) && !track[y2+2][x2-1])
+      {
+        y2+=2;
+        x2--;
+        obj.y2 = y2;
+        obj.x2 = x2;
+        obj.next = true;
+      }
+      else 
+      {
+        obj.next = false;
+      }
+      break;
+    case 4:
+      if(InTable(y2+2,x2+1,row,col) && !track[y2+2][x2+1])
+      {
+        y2+=2;
+        x2++;
+        obj.y2 = y2;
+        obj.x2 = x2;
+        obj.next = true;
+        }
+      else 
+      {
+        obj.next = false;
+      }
+      break;
+	case 5:
+      if(InTable(y2+1,x2+2,row,col) && !track[y2+1][x2+2])
+      {
+        y2++;
+        x2+=2;
+        obj.y2 = y2;
+        obj.x2 = x2;
+        obj.next = true;
+      }
+      else 
+      {
+        obj.next = false;
+      }
+      break;
+    case 6:
+      if(InTable(y2-1,x2+2,row,col) && !track[y2-1][x2+2])
+      {
+        y2--;
+        x2+=2;
+        obj.y2 = y2;
+        obj.x2 = x2;
+        obj.next = true;
+      }
+      else 
+      {
+        obj.next = false;
+      }
+      break;
+    case 7:
+      if(InTable(y2-2,x2+1,row,col) && !track[y2-2][x2+1])
+      {
+        y2-=2;
+        x2++;
+        obj.y2 = y2;
+        obj.x2 = x2;
+        obj.next = true;
+      }
+      else 
+      {
+        obj.next = false;
+      }
+      break;
+    default:
+      alert("马没有可走的方向！");
+      obj.next = false;
+    }
+  }
+
+  //根据step改变标记数组
+  function refresh(y3,x3,Y,X,row,col,track,step)
+  {
+    track[y3][x3] = false;
+    Y.splice(step-1,1); 
+    X.splice(step-1,1);
+  }
+
+//判断棋子的位置是否在棋盘上
+  function InTable(y2,x2,row,col)
+  {
+    return y2>-1 && y2<row && x2>-1 && x2<col;
+  } 
+  
+  function jump(y1,x1,row,col,track,Y,X,step)
+  {
+    var y=y1;
+	  var x=x1;
+	  //y1 = obj.y2;
+	  //x1 = obj.x2;
+	  Y.push(y1);
+	  X.push(x1);
+	  if(step!=1)
+	  {
+	    track[y1][x1]=true;
+	  }
+		  
+	  if( y1==Y[0] && x1==X[0] && step!=1)
+      {
+		    num++;
+		    document.getElementById("ans").innerHTML +="跳法"+num;
+		    var resultX,resultY;
+        for(var j=0;j<X.length;j++)
+        {
+		      resultY = Y[j]+1;
+		      resultX = X[j]+1;
+          document.getElementById("ans").innerHTML +=" "+"<"+resultY+","+resultX+">";
+        }
+	      document.getElementById("ans").innerHTML +="</br>";
+      }
+	   
+ 
+      for(var i=0;i<8;i++)
+      {
+		    y1 = y;
+		    x1 = x;
+		    next(y1,x1,i,row,col,track,Y,X);
+		    if(obj.next)
+        {
+		      y1 = obj.y2;
+	        x1 = obj.x2;
+          jump(y1,x1,row,col,track,Y,X,step+1);
+		      refresh(y1,x1,Y,X,row,col,track,step+1);
+        }
+      }	
+  }
+
+  function vault()
+  { 
+    document.getElementById("ans").innerHTML ="";
+    document.getElementById("ans").innerHTML +="";
+
+    var row = Number(document.getElementById("row").value);
+    var col = Number(document.getElementById("col").value);
+    var y0 = Number(document.getElementById("y0").value-1);
+    var x0 = Number(document.getElementById("x0").value-1);
+    //跳马轨迹的数组
+    var Y = new Array;
+    var X = new Array;
+     
+    //标记马所经之处的数组
+    var track = new Array();         
+    for(var i=0;i<row;i++)  //一维长度
+    {          
+      track[i]=new Array();
+      for(var j=0;j<col;j++)  //二维长度
+      {      
+        track[i][j]=false;
+      }
+    }
+
+    var step = 1;
+    jump(y0,x0,row,col,track,Y,X,step);
+  
+  }
+
+  </script>
+</body>
+</html>
