@@ -1,0 +1,110 @@
+<html>
+    <head>
+       <title>
+         taskSequences
+       </title>
+    </head>
+    <body>
+      最佳工作序列：
+      <input type="button" value="计算" onclick="printResult()"/>
+      <div id="result">
+      <!--这里显示-->
+      </div>
+      
+      <script>
+      //数据内容consumeT、deadline、value、id(当前序号)
+      var consumeT = new Array(4,3,2,1);
+      var deadline = new Array(10,8,4,2);
+      var value = new Array(2,3,3,6);	
+      var id = new Array(1,2,3,4);
+      
+      for(var i=0;i<deadline1.length-1;i++)
+      {
+        while(deadline1[i]>deadline1[i+1])
+        {
+          for(var j=0;j<deadline1.length-1;j++)
+          {
+            if(deadline1[j]>deadline1[j+1])
+            {
+              var x = deadline1[j];
+              deadline1[j] = deadline1[j+1];
+              deadline1[j+1] = x;
+            }
+          }
+        }
+      }
+      var sort = new Array();
+      var deadline1 = deadline;  //排序后的deadline
+      for(var k=0;k<deadline1.length;k++)
+      {
+        for(var l=0;l<deadline1.length;l++)
+        {
+          if(deadline[k]==deadline1[l])
+          {
+            sort.push(l);
+          }
+        }
+      }
+      
+      
+      //节点内容residualV、avaliableV、pastT、sort(排序后的数组)、done(标记是否选过)
+      var sumV = 0;
+      for(var m=0;m<value.length;m++)
+      {
+        sumV += value[m];
+      }
+      var residualV = sumV;
+      var avaliableV = sumV;
+      var pastT = 0;
+      var done = new Array(false,false,false,false);
+      var p = 0;
+      var q = 0;
+      
+      //关于选下一个工作的递归函数
+      function search(residualV,avaliableV,pastT,done,id)
+      {
+        while(avaliableV!=0)
+        {
+          for(;q<sort.length;q++)
+          {
+            for(p=0;p<sort.length;p++)
+            {
+              if(!done[q])
+              {
+                if(sort[q]==p)
+                {
+                  if(pastT+consumeT[q]<=deadline[q])
+                  {
+                    pastT += consumeT[q];
+                    residualV -= value[q];
+                    done[q] = true;
+                      avaliableV -= value[q];
+                    search(residualV,avaliableV,pastT,done,id);
+                  }
+                }
+              }
+              else
+              {
+                pastT -= consumeT[q];
+                residualV += value[q];
+                avaliableV += value[q];
+                p--;
+              }
+            }
+          }
+        }
+        pastT -= consumeT[q];
+        residualV += value[q];
+        avaliableV += value[q];
+        p--;
+      }
+      
+      function printResult()
+      {
+        var result = document.getElementById("result");
+        //result.innerHTML = ;
+      }
+      
+      </script>
+    </body>
+  </html>
