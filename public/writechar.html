@@ -1,0 +1,278 @@
+<html>
+    <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=gb2312" />
+      <title>
+        write character
+      </title>
+    </head>
+  
+    <body>
+    <canvas id="Canvas1" width="180" height="180" style="border:1px dashed black;" ></canvas>
+    <canvas id="Canvas2" width="180" height="180" style="border:1px dashed black;" ></canvas>
+    <canvas id="Canvas3" width="180" height="180" style="border:1px dashed black;" ></canvas>
+    <br/>
+    
+    请选择文本文件:<input type="file" id="file" />
+    <input type="button" value="显示文本文件" onclick="showText()"/>
+    <div name="result" id="result">
+    <!--这里显示文件内容-->
+    </div>
+  
+    lineWidth:
+    <input type="text" id="lineWidth" style="width:40px;" value="1">
+    lineColor:
+    <!-- 带值的下拉菜单 -->
+    <select name="lineColor" id="lineColor">
+    <option value="rgb(0,0,0)" selected="black">black</option>
+    <option value="rgb(255,0,0)">red</option>
+    <option value="rgb(0,255,0)">green</option>
+    <option value="rgb(0,0,255)">blue</option>
+    </select>
+  
+    <input type="button" value="paint" onclick="paintchars()"/>  <!--包含set和paint的作用 -->
+    <input type="button" value="refresh" onclick="refresh()"/>
+    <div id="printXY">
+    <!-- 这里显示 -->
+    </div>
+  
+    <script type="text/javascript">
+      
+      function drawGrid(canvas)
+      {
+        w = 170;
+        h = 170;
+        if(canvas.getContext)
+        {
+          var ctx = canvas.getContext("2d");
+          ctx.lineWidth = 0.5;
+          //先画横线
+          ctx.globalCompositeOperation = 'destination-over';
+          for( var i = 1; i * 10 <= h; i++ )
+          {
+            ctx.strokeStyle = "gray";
+            ctx.beginPath();
+            //ctx.moveTo(0,i*10);
+            ctx.moveTo(10,i*10);
+            ctx.lineTo(w,i*10);
+            ctx.stroke();
+          }
+          //再画纵线
+          for( var j = 1; j * 10 <= w; j++ )
+          {
+            ctx.strokeStyle = "gray";
+            ctx.beginPath();
+            //ctx.moveTo(j*10, 0);
+            ctx.moveTo(j*10, 10);
+            ctx.lineTo(j*10, h);
+            ctx.stroke();
+          }
+          //绘制边框
+          ctx.strokeStyle = "gray";
+          ctx.beginPath();
+          //ctx.moveTo(0+10,0+10);
+          //ctx.lineTo(w,0+10);
+          ctx.moveTo(0+10,0+10);
+          ctx.lineTo(w,0+10);
+          ctx.stroke();
+  
+          ctx.strokeStyle = "gray";
+          ctx.beginPath();
+          ctx.moveTo(0+10,0+10);
+          ctx.lineTo(0+10,h);
+          ctx.stroke();
+        }
+      }
+    
+      //画布1
+      var c1 = document.getElementById("Canvas1");
+      var ctx1 = c1.getContext("2d");
+      drawGrid(c1);
+      //画布2
+      var c2 = document.getElementById("Canvas2");
+      var ctx2 = c2.getContext("2d");
+      drawGrid(c2);
+      //画布3
+      var c3 = document.getElementById("Canvas3");
+      var ctx3 = c3.getContext("2d");
+      drawGrid(c3);
+      
+      <!-- 显示文件内容-- -->
+      function showText()
+      {
+        var file=document.getElementById("file").files[0];
+        var reader=new FileReader();
+        reader.readAsText(file);
+        reader.onload=function(e)
+        {
+          var result=document.getElementById("result");
+          result.innerHTML=this.result;
+        }
+      }
+  
+      <!-- 刷新画布的函数 -->
+      function refresh()
+      {
+        ctx1.clearRect(0,0,170,170);
+        ctx2.clearRect(0,0,170,170);
+        ctx3.clearRect(0,0,170,170);
+        drawGrid(c1);
+        drawGrid(c2);
+        drawGrid(c3);
+      }
+  
+      <!-- 写单个汉字的函数 -->
+      function paintchars()
+      {
+        var file=document.getElementById("file").files[0];
+        var reader=new FileReader();
+        reader.readAsText(file);
+        reader.onload=function(e)
+        {
+          endNum = 0;
+          var str = this.result;
+          var indexStr = str;		
+          while(indexStr!="")
+          {
+            endNum+=1;
+            var charEndIndex = indexStr.indexOf("END\r\nEND")+7;
+            indexStr = indexStr.slice(charEndIndex);
+          }
+  
+          //split str by END\nEND\n
+          var str1 = this.result;
+          var character = new Array();
+          character = str1.split("END\r\nEND\r\n");
+          var splitResult="";
+                  
+          for(var i=0;i<endNum;i++)
+          {
+            if(i==0)
+            {
+              ctx1.beginPath();
+              var lines = character[i];
+              var line = new Array();
+              line = lines.split("END\r\n");  //js的转义字符
+              for(var j=0;j<line.length;j++)
+              {
+                var rows = line[j];
+                  var row = new Array();
+                row = rows.split("\r\n");
+              
+                var oneOrNot = 1;
+                for(var k=0;k<row.length;k++)
+                {
+                  if(row[k].search(",")!=-1)
+                  {
+                    var points = row[k];
+                    var point = new Array();
+                    point = points.split(",");
+                    var x = parseFloat(point[0])*10+10;
+                    var y = (16-parseFloat(point[1]))*10+10;
+                    ctx1.lineWidth = document.getElementById("lineWidth").value; 
+                    ctx1.strokeStyle = document.getElementById("lineColor").value;
+                    var poi = 0;			  
+                    if(oneOrNot == 1)
+                    {
+                        ctx1.moveTo(x,y);
+                      poi++;
+                      oneOrNot++;
+                    }
+                    else
+                    {
+                        ctx1.lineTo(x,y);
+                      poi++;
+                    }
+                  }
+                }
+                ctx1.stroke();
+              }
+            }
+            if(i==1)
+            {
+              ctx2.beginPath();
+              var lines = character[i];
+              var line = new Array();
+              line = lines.split("END\r\n");  //js的转义字符
+              for(var j=0;j<line.length;j++)
+              {
+                var rows = line[j];
+                  var row = new Array();
+                row = rows.split("\r\n");
+              
+                var oneOrNot = 1;
+                for(var k=0;k<row.length;k++)
+                {
+                  if(row[k].search(",")!=-1)
+                  {
+                    var points = row[k];
+                    var point = new Array();
+                    point = points.split(",");
+                    var x = parseFloat(point[0])*10+10;
+                    var y = (16-parseFloat(point[1]))*10+10;
+                    ctx2.lineWidth = document.getElementById("lineWidth").value; 
+                    ctx2.strokeStyle = document.getElementById("lineColor").value;
+                    var poi = 0;			  
+                    if(oneOrNot == 1)
+                    {
+                        ctx2.moveTo(x,y);
+                      poi++;
+                      oneOrNot++;
+                    }
+                    else
+                    {
+                        ctx2.lineTo(x,y);
+                      poi++;
+                    }
+                  }
+                }
+                ctx2.stroke();
+              }
+            }
+            if(i==2)
+            {
+              ctx3.beginPath();
+              var lines = character[i];
+              var line = new Array();
+              line = lines.split("END\r\n");  //js的转义字符
+              for(var j=0;j<line.length;j++)
+              {
+                var rows = line[j];
+                  var row = new Array();
+                row = rows.split("\r\n");
+              
+                var oneOrNot = 1;
+                for(var k=0;k<row.length;k++)
+                {
+                  if(row[k].search(",")!=-1)
+                  {
+                    var points = row[k];
+                    var point = new Array();
+                    point = points.split(",");
+                    var x = parseFloat(point[0])*10+10;
+                    var y = (16-parseFloat(point[1]))*10+10;
+                    ctx3.lineWidth = document.getElementById("lineWidth").value; 
+                    ctx3.strokeStyle = document.getElementById("lineColor").value;
+                    var poi = 0;			  
+                    if(oneOrNot == 1)
+                    {
+                        ctx3.moveTo(x,y);
+                      poi++;
+                      oneOrNot++;
+                    }
+                    else
+                    {
+                        ctx3.lineTo(x,y);
+                      poi++;
+                    }
+                  }
+                }
+                ctx3.stroke();
+              }
+            } 
+          }
+        }
+      }
+  </script>
+  </body>
+  </html>
+  
