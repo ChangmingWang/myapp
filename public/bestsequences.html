@@ -1,110 +1,193 @@
 <html>
-    <head>
-       <title>
-         taskSequences
-       </title>
-    </head>
-    <body>
-      最佳工作序列：
-      <input type="button" value="计算" onclick="printResult()"/>
-      <div id="result">
-      <!--这里显示-->
-      </div>
-      
-      <script>
-      //数据内容consumeT、deadline、value、id(当前序号)
-      var consumeT = new Array(4,3,2,1);
-      var deadline = new Array(10,8,4,2);
-      var value = new Array(2,3,3,6);	
-      var id = new Array(1,2,3,4);
-      
-      for(var i=0;i<deadline1.length-1;i++)
+  <head>
+     <title>
+	   taskSequences
+	 </title>
+  </head>
+  <body>
+    
+    <table width="400" border="1">
+     <tr>
+      <th >工作序号</th>
+      <th >工作价值</th>
+      <th >工作费时</th>
+      <th >完成期限</th>
+     </tr>
+     <tr>
+      <td >1</td>
+      <td >2</td>
+      <td >4</td>
+      <td >10</td>
+     </tr>
+     <tr>
+      <td >2</td>
+      <td >3</td>
+      <td >3</td>
+      <td >8</td>
+     </tr>
+     <tr>
+      <td >3</td>
+      <td >3</td>
+      <td >2</td>
+      <td >4</td>
+     </tr>
+     <tr>
+      <td >4</td>
+      <td >6</td>
+      <td >1</td>
+      <td >2</td>
+     </tr>
+    </table>
+    
+    最佳工作序列：
+	<input type="button" value="计算" onclick="printResult()"/>
+	<div id="result">
+	<!--这里显示-->
+	</div>
+	
+	<script>
+	//数据内容consumeT、deadline、value
+	var deadline = new Array(10,8,4,2);
+	var consumeT = new Array(4,3,2,1);
+	var value = new Array(2,3,3,6);
+    var id = new Array(1,2,3,4);	
+	var Deadline = deadline;  //排序后的deadline
+	var ConsumeT = consumeT;  //排序后的consumeT
+	var Value = value;  //排序后的value
+	var ID = id;  //排序后的id
+	
+	for(var i=0;i<Deadline.length-1;i++)
+	{
+	  while(Deadline[i]>Deadline[i+1])
+	  {
+	    for(var j=0;j<Deadline.length-1;j++)
+		{
+		  if(Deadline[j]>Deadline[j+1])
+		  {
+		    var x = Deadline[j];
+			Deadline[j] = Deadline[j+1];
+			Deadline[j+1] = x;
+			
+			var y = ConsumeT[j];
+			ConsumeT[j] = ConsumeT[j+1];
+			ConsumeT[j+1] = y;
+			
+			var z = Value[j];
+			Value[j] = Value[j+1];
+			Value[j+1] = z;
+			
+			var w = ID[j];
+			ID[j] = ID[j+1];
+			ID[j+1] = w;
+		  }
+		}
+	  }
+	}
+	
+
+	//节点内容residualV、avaliableV、pastT、ID(排序后的数组)、done(是否做过)、mark(是否能做)
+	var sumV = 0;
+	for(var m=0;m<value.length;m++)
+	{
+	  sumV += value[m];
+	}
+	var residualV = sumV;
+	var avaliableV = sumV;
+	var pastT = 0;
+	var done = new Array(false,false,false,false);  //是否做过第0,1,2,3工作
+	var mark = new Array(true,true,true,true);  //是否可以走
+	var p = 0;
+	
+	//排出可能组合数pNum、存具体工作序列的一维数组pSequence
+	//var pNum = 0;
+    var pSequence = "";
+	var pSequences = new Array();
+	
+	//关于选下一个工作的递归函数
+	function search(residualV,avaliableV,pastT,done,mark)
+	{
+	  while(avaliableV!=0)
+	  {
+		for(p=0;p<ID.length;p++)
+	    {
+	      if(!done[p] && mark[p]&& pastT+ConsumeT[p]<=Deadline[p])
+		  {
+			 pastT += ConsumeT[p];
+			 residualV -= Value[p];
+			 done[p] = true;
+			 mark[p] = false;
+			 //avaliableV -= Value[p];
+             for(var i=p;i<done.length;i++)
+             {
+               if(done[i])
+               {
+                 avaliableV -= value[i]; 
+               }
+             }
+			 search(residualV,avaliableV,pastT,done,mark);
+		  }
+		}
+	  }
+	  
+	  for(var q=0;q<ID.length;q++)
+	  {
+	    if(done[q])
+		{
+		  pSequence += ID[q]+"<\t>";
+		}
+	  }
+	  pSequences.push(pSequence);
+      if(pSequence=="1\r\n")
       {
-        while(deadline1[i]>deadline1[i+1])
-        {
-          for(var j=0;j<deadline1.length-1;j++)
+        return 0;
+      }
+	  pSequence = "";
+	  p--;
+	  for(var r=p;r<ID.length;r++)
+	  {
+		if(!done[r])
+		{
+		  search(residualV,avaliableV,pastT,done,mark);
+		}
+		else
+		{
+		  for(var s=r;s<ID.length;s++)
+	      {
+			done[s] = false;
+            mark[s] = true;
+			pastT -= ConsumeT[s];
+			residualV += Value[s];
+			//avaliableV += Value[s];
+		  }
+          mark[r] = false;
+
+          for(var i=0;i<done.length;i++)
           {
-            if(deadline1[j]>deadline1[j+1])
+            if(!done[i] && mark[i])
             {
-              var x = deadline1[j];
-              deadline1[j] = deadline1[j+1];
-              deadline1[j+1] = x;
+              avaliableV += value[i]; 
             }
           }
-        }
-      }
-      var sort = new Array();
-      var deadline1 = deadline;  //排序后的deadline
-      for(var k=0;k<deadline1.length;k++)
-      {
-        for(var l=0;l<deadline1.length;l++)
-        {
-          if(deadline[k]==deadline1[l])
-          {
-            sort.push(l);
-          }
-        }
-      }
-      
-      
-      //节点内容residualV、avaliableV、pastT、sort(排序后的数组)、done(标记是否选过)
-      var sumV = 0;
-      for(var m=0;m<value.length;m++)
-      {
-        sumV += value[m];
-      }
-      var residualV = sumV;
-      var avaliableV = sumV;
-      var pastT = 0;
-      var done = new Array(false,false,false,false);
-      var p = 0;
-      var q = 0;
-      
-      //关于选下一个工作的递归函数
-      function search(residualV,avaliableV,pastT,done,id)
-      {
-        while(avaliableV!=0)
-        {
-          for(;q<sort.length;q++)
-          {
-            for(p=0;p<sort.length;p++)
-            {
-              if(!done[q])
-              {
-                if(sort[q]==p)
-                {
-                  if(pastT+consumeT[q]<=deadline[q])
-                  {
-                    pastT += consumeT[q];
-                    residualV -= value[q];
-                    done[q] = true;
-                      avaliableV -= value[q];
-                    search(residualV,avaliableV,pastT,done,id);
-                  }
-                }
-              }
-              else
-              {
-                pastT -= consumeT[q];
-                residualV += value[q];
-                avaliableV += value[q];
-                p--;
-              }
-            }
-          }
-        }
-        pastT -= consumeT[q];
-        residualV += value[q];
-        avaliableV += value[q];
-        p--;
-      }
-      
-      function printResult()
-      {
-        var result = document.getElementById("result");
-        //result.innerHTML = ;
-      }
-      
-      </script>
-    </body>
-  </html>
+          p--;
+		  //break;
+		}
+	  }
+	}
+
+	
+	function printResult()
+	{
+	  search(residualV,avaliableV,pastT,done,mark);
+	  //按列存储循环产生的工作序列，按换行符分开
+	  var temp = "";
+	  var result = document.getElementById("result");
+      for(var i=0;i<pSequences.length;i++)
+	  {          
+        temp += pSequences[i]+"<br/>";
+	  }     
+	  result.innerHTML = temp;
+	}
+	
+	</script>
+  </body>
+</html>
