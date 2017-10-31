@@ -1,0 +1,866 @@
+<html>
+    <head>
+      <title>
+        coordinate transform
+      </title>
+    </head>
+    <body>
+    <canvas id="canvas1" width="640" height="480" style="border:1px dashed black;" ></canvas>
+    <canvas id="canvas2" width="640" height="480" style="border:1px dashed black;" ></canvas>
+    <br/>
+     
+    <label style="text-align:left"/>Gen文件:</label>
+    <input type="file" id="file1" />
+    <input type="button" value="确定" style="margin-left:0px" onclick="assureFile()" />  
+    <label style="padding-left:270px"/>Gen文件:</label>
+    <input type="file" id="file2" /> 
+    <input type="button" value="确定" style="margin-left:0px" onclick="assureFile()" />  
+    </br>
+  
+    <label style="text-align:left">LineWidth:</label>
+    <input type="text" id="lineWidth1" style="width:40px;" value="0.5">  
+    <label style="padding-left:516px">LineWidth:</label>
+    <input type="text" id="lineWidth2" style="width:40px;" value="0.5">
+    </br>
+    
+    <label  style="text-align:left">LineColor:</label>
+    <!-- 带值的下拉菜单 -->
+    <select id="lineColor1">
+    <option value="rgb(0,0,0)" selected="black">black</option>
+    <option value="rgb(255,0,0)">red</option>
+    <option value="rgb(0,255,0)">green</option>
+    <option value="rgb(0,0,255)">blue</option>
+    </select>
+    <label style="padding-left:503px">LineColor:</label>
+    <!-- 带值的下拉菜单 -->
+    <select id="lineColor2">
+    <option value="rgb(0,0,0)" selected="black">black</option>
+    <option value="rgb(255,0,0)">red</option>
+    <option value="rgb(0,255,0)">green</option>
+    <option value="rgb(0,0,255)">blue</option>
+    </select>
+    <br/>
+    
+    <label style="text-align:left">China Map:</label>
+    <input type="button" value="display" onclick="paintChina()" />
+    <input type="button" value="refresh" onclick="refresh('China')"/>
+    <label style="padding-left:431px">World Map:</label>  
+    <input type="button" value="display" onclick="paintWorld()" />
+    <input type="button" value="Add Orthodrome" onclick="Orthodrome()" />
+    <input type="button" value="refresh" onclick="refresh('World')"/>  
+    </br>
+    
+    <label style="text-align:left">Projection:</label>
+    <input type="button" value="Mercator" onclick="MercatorProj1()" />
+    <input type="button" value="Lambert" onclick="LambertProj1()" />
+    <label style="padding-left:417px">Projection:</label>
+    <input type="button" value="Mercator" onclick="MercatorProj2()" />  
+    </br>
+    
+    <input type="button" value="showTxt1" style="margin-left:0px" onclick="showText()"/>
+    <input type="button" value="showTxt2" style="margin-left:566px" onclick="showText()"/>
+    <div id="result" style="padding-left:431px"></div>
+    
+    <script type="text/javascript">
+      var c1 = document.getElementById("canvas1");
+      var ctx1 = c1.getContext("2d");
+      var c2 = document.getElementById("canvas2");
+      var ctx2 = c2.getContext("2d");
+      
+      var width = parseInt(c1.width);
+      var height = parseInt(c1.height);
+      var x_scale = width/360;
+      var y_scale = height/180;
+    
+      //存储每个地图的点的数组
+      var map1_poi = new Array();
+      var map2_poi = new Array();
+      
+      //刷新画布的函数
+      function refresh(text)
+      {
+        if(text=='China')
+        {
+          ctx1.clearRect(0,0,width,height);
+        }
+        if(text=='World')
+        {
+          ctx2.clearRect(0,0,width,height);
+        }
+      }
+    
+      //确定的函数
+      function assureFile()
+      {
+        var file1 = document.getElementById("file1").files[0];
+        var file2 = document.getElementById("file2").files[0];
+        if(file1!=null)
+        {
+          var reader1 =new FileReader();
+          reader1.readAsText(file1);
+          reader1.onload=function(e)
+          {
+              var geom1 = this.result;
+            readAndSavePoi(map1_poi,geom1);			
+          }
+        }
+        if(file2!=null)
+        {
+          var reader2 =new FileReader();
+          reader2.readAsText(file2);
+          reader2.onload=function(e)
+          {
+            var geom2 = this.result;
+            readAndSavePoi(map2_poi,geom2);		
+          }
+        } 
+      }
+    
+      //存储地图坐标的函数
+      function readAndSavePoi(map_poi,geom)
+      {
+        var lines = geom;  //存储字符串形式的几何对象
+        var line = new Array();
+        line = lines.split("END\r\n");  //存储字符串形式的线几何对象
+        for(var j=0;j<line.length;j++)
+        {
+          var rows = line[j];
+          var row = new Array();
+          row = rows.split("\r\n");  //存储字符串形式的一行（一对点）
+              
+          var oneOrNot = 1;
+          for(var k=0;k<row.length;k++)
+          {
+            if(row[k].search(",")!=-1)
+            {
+              var points = row[k];
+              var point = new Array();  //存储字符串形式的横或纵坐标，0为x，1为y
+              point = points.split(",");
+                    
+              var xy = new Array();
+              xy.push(parseFloat(point[0]));
+              xy.push(parseFloat(point[1]));
+              map_poi.push(xy);  //存储数字形式的一对点（一个数组）的数组
+            }
+            else
+            {
+              map_poi.push(Number(row[k]));
+            }
+          }
+        }
+      }
+    
+      //基于北京54画中国地图的函数
+      function paintChina()
+      {
+        ctx1.beginPath();
+        var lineID = 1;
+        var factor1 = 6;  //缩放因子
+        bj54ChinaGrid(c1,factor1);
+        for(var i=0;i<map1_poi.length;i++)
+        {
+          var r = map1_poi[i];
+          if(r.constructor == Array)
+          {
+            var x = r[0];
+            var y = r[1];
+            var X = (x+180-234)*factor1;
+            var Y = (90-y-20)*factor1;
+        
+            if(lineID == 1)
+            {
+              ctx1.moveTo(X,Y);
+              lineID++;
+            }
+            else
+            {
+              ctx1.lineTo(X,Y);
+            }
+          }
+          else
+          {
+            lineID = 1;
+          }
+        }
+        ctx1.lineWidth = document.getElementById("lineWidth1").value; 
+        ctx1.strokeStyle = document.getElementById("lineColor1").value;
+        ctx1.stroke();
+        
+        //画北京54中国地图格网
+        function bj54ChinaGrid(canvas,factor1)
+        {
+          w = 70;
+          h = 65;
+          if(canvas.getContext)
+          {
+            var ctx = canvas.getContext("2d");
+            ctx.lineWidth = 0.5;
+            //横线
+            ctx.globalCompositeOperation = 'destination-over';
+            for( var i = 0; i * 5 <= h; i++ )
+            {
+              ctx.beginPath();
+              var x1 = 0;
+              var y1 = i*5;
+              var x2 = w;
+              var y2 = i*5;
+              x1 = (x1+180-234)*factor1+324+100-3;
+              x2 = (x2+180-234)*factor1+324+100-3;
+              y1 = (90-y1-20)*factor1-3;
+              y2 = (90-y2-20)*factor1-3;
+              
+              ctx.moveTo(x1,y1);
+              ctx.lineTo(x2,y2);
+              ctx.strokeStyle = "gray";
+              ctx.stroke();
+            }
+            //纵线
+            for( var j = 0; j * 5 <= w; j++ )
+            {
+              ctx.beginPath();
+              var x1 = j*5;
+              var y1 = 0;
+              var x2 = j*5;
+              var y2 = h;
+              x1 = (x1+180-234)*factor1+324+100-3;
+              x2 = (x2+180-234)*factor1+324+100-3;
+              y1 = (90-y1-20)*factor1-3;
+              y2 = (90-y2-20)*factor1-3;
+              
+              ctx.moveTo(x1,y1);
+              ctx.lineTo(x2,y2);
+              ctx.strokeStyle = "gray";
+              ctx.stroke();
+            }
+          }
+        }
+      }
+    
+      //基于WGS84画世界地图的函数
+      function paintWorld()
+      {
+        ctx2.beginPath();
+        wgs84WorldGrid(c2);
+          var lineID = 1;
+        for(var i=0;i<map2_poi.length;i++)
+        {
+          var r = map2_poi[i];
+          if(r.constructor == Array)
+          {
+            var x = r[0];
+            var y = r[1];				  
+            var X = (x+180)*1.5+45;
+            var Y = (90-y)*1.5+100;
+        
+            if(lineID == 1)
+            {
+              ctx2.moveTo(X,Y);
+              lineID++;
+            }
+            else
+            {
+              ctx2.lineTo(X,Y);
+            }
+          }
+          else
+          {
+            lineID = 1;
+          }
+        }
+        ctx2.lineWidth = document.getElementById("lineWidth2").value; 
+        ctx2.strokeStyle = document.getElementById("lineColor2").value;
+        ctx2.stroke();
+        
+        //画wgs84世界地图格网
+        function wgs84WorldGrid(canvas)
+        {
+          w = 360;
+          h = 180;
+          if(canvas.getContext)
+          {
+            var ctx = canvas.getContext("2d");
+            ctx.lineWidth = 0.5;
+            //横线
+            ctx.globalCompositeOperation = 'destination-over';
+            for( var i = 0; i * 5 <= h; i++ )
+            {
+              ctx.beginPath();
+              var x1 = 0;
+              var y1 = i*5;
+              var x2 = w;
+              var y2 = i*5;
+              x1 = x1*1.5+45;
+              x2 = x2*1.5+45;
+              y1 = y1*1.5+100;
+              y2 = y2*1.5+100;
+              
+              ctx.moveTo(x1,y1);
+              ctx.lineTo(x2,y2);
+              ctx.strokeStyle = "gray";
+              ctx.stroke();
+            }
+            //纵线
+            for( var j = 0; j * 5 <= w; j++ )
+            {
+              ctx.beginPath();
+              var x1 = j*5;
+              var y1 = 0;
+              var x2 = j*5;
+              var y2 = h;
+              x1 = x1*1.5+45;
+              x2 = x2*1.5+45;
+              y1 = y1*1.5+100;
+              y2 = y2*1.5+100;
+              
+              ctx.moveTo(x1,y1);
+              ctx.lineTo(x2,y2);
+              ctx.strokeStyle = "gray";
+              ctx.stroke();
+            }
+          }
+        }
+      }
+      
+      //存储中国地图Lambert投影后的点的数组
+      var lambertMap1_poi = map1_poi;	  
+      //兰勃特投影
+      function LambertProj1()
+      {
+        ctx1.clearRect(0,0,width,height);
+        //lambertChinaGrid(c1);
+        
+        //兰勃特投影坐标转换的函数
+        function LambertTrans(B,L)
+        {
+          var B1 = 20*Math.PI/180;  //第一标准纬线
+          var B2 = 40*Math.PI/180;  //第二标准纬线
+          
+          var a = 6378245;  //Krasovsky_1940椭球体的长半轴
+          var L0 = 105;  //中央经线 
+          var e = 0.006693421622966;  //Krasovsky_1940椭球体的第一偏心率
+  
+          var m_B1 = Math.cos(B1)/Math.sqrt(1-e*e*Math.pow(Math.sin(B1),2));
+          var m_B2 = Math.cos(B2)/Math.sqrt(1-e*e*Math.pow(Math.sin(B2),2));
+          var t_B1 = Math.tan(Math.PI/4-B1/2)/Math.pow((1-e*Math.sin(B1))/(1+e*Math.sin(B1)),e/2);
+          var t_B2 = Math.tan(Math.PI/4-B2/2)/Math.pow((1-e*Math.sin(B2))/(1+e*Math.sin(B2)),e/2);
+          var n = Math.log(m_B1/m_B2)/Math.log(t_B1/t_B2);
+  
+          var B0 = 0;  //原点纬线		
+          B0 = B0*Math.PI/180;
+          var m_B0 = Math.cos(B0)/Math.sqrt(1-e*e*Math.pow(Math.sin(B0),2));
+          var t_B0 = Math.tan(Math.PI/4-B0/2)/Math.pow((1-e*Math.sin(B0))/(1+e*Math.sin(B0)),e/2);
+          var F_B0 = m_B0/(n*Math.pow(t_B0,n));		
+          var r0 = a*F_B0*Math.pow(t_B0,n);  //原点纬度处的r值
+            
+          //坐标(B,L)
+          B = B*Math.PI/180; 
+          L = L*Math.PI/180;
+          var m = Math.cos(B)/Math.sqrt(1-e*e*Math.pow(Math.sin(B),2));
+          var t = Math.tan(Math.PI/4-B/2)/Math.pow((1-e*Math.sin(B))/(1+e*Math.sin(B)),e/2);
+          var F = m/(n*Math.pow(t,n));
+          var r = a*F*Math.pow(t,n);  //转换点纬度处的r值
+          var theta = n*(L-L0);  //弧度值
+              
+          //返回的结果数组（含r0,r,theta）
+          var result = new Array(r0,r,theta);
+          return result;
+        }
+        
+        for(var i=0;i<lambertMap1_poi.length;i++)
+        {
+          var r = lambertMap1_poi[i];
+          if(r.constructor == Array)
+          {
+            var B = r[1];
+            var L = r[0];	  
+            var result = LambertTrans(B,L);
+            
+            var r0 = result[0];
+            var r = result[1];
+            var theta = result[2];  //theta值为弧度
+            //纵坐标X轴,横坐标Y轴
+            var X = r0-r*Math.cos(theta);
+            var Y = r*Math.sin(theta);
+            
+            lambertMap1_poi[i][0] = X/100000;  
+            lambertMap1_poi[i][1] = Y/100000;
+          }
+        }
+        
+        //画兰勃特投影后的中国地图
+        ctx1.beginPath();
+        var lineID = 1;
+        for(var i=0;i<lambertMap1_poi.length;i++)
+        {
+          var r = lambertMap1_poi[i];
+          if(r.constructor == Array)
+          {
+            var x1 = r[1];  //height
+            var y1 = r[0];  //width	
+            
+            var X1 = -y1*6+1080;
+            var Y1 = -x1*6-360;
+            
+            if(lineID == 1)
+            {
+              ctx1.moveTo(X1,Y1);
+              lineID++;
+            }
+            else
+            {
+              ctx1.lineTo(X1,Y1);
+            }
+          }
+          else
+          {
+            lineID = 1;
+          }
+        }
+        ctx1.lineWidth = document.getElementById("lineWidth1").value; 
+        ctx1.strokeStyle = document.getElementById("lineColor1").value;
+        ctx1.stroke();
+        
+        function lambertChinaGrid(canvas)
+        {
+          w = 60;
+          h = 75;
+          if(canvas.getContext)
+          {
+            var ctx = canvas.getContext("2d");
+            ctx.lineWidth = 0.5;
+            //纵线
+            ctx.globalCompositeOperation = 'destination-over';
+            ctx.beginPath();
+            for( var i = 0; i * 5 <= h-5; i++ )
+            {
+              //ctx.beginPath();
+              var x1 = 0;
+              var y1 = 0+i*5;
+              var x2 = w;
+              var y2 = 0+i*5;
+              
+              var result1 = LambertTrans(x1,y1);
+              var result2 = LambertTrans(x2,y2);
+              
+              var X1 = (result1[0]-result1[1]*Math.cos(result1[2]))/1000000;
+              var Y1 = result1[1]*Math.sin(result1[2])/1000000;
+              
+              var X2 = (result2[0]-result2[1]*Math.cos(result2[2]))/1000000;
+              var Y2 = result2[1]*Math.sin(result2[2])/1000000;
+              
+              var y1 = X1*50-540;
+              var x1 = -Y1*50-140;
+              
+              var y2 = X2*50-540;
+              var x2 = -Y2*50-140;
+              
+              //
+              ctx.moveTo(x1,y1);
+              ctx.lineTo(x2,y2);
+              ctx.strokeStyle = "gray";
+              ctx.stroke();
+            }
+            //横线
+            for(var j=0; j * 5 <= w; j++)
+            {
+              ctx.beginPath();
+              for(var k=0; k * 5 <= h-5; k++)
+              {
+                var x = j*5;
+                var y = 70+k*5;
+                
+                var result = LambertTrans(x,y);
+                var X = (result[0]-result[1]*Math.cos(result[2]))/1000000;
+                var Y = result[1]*Math.sin(result[2])/1000000;
+                
+                var y = X*50-540;
+                var x = -Y*50-140;
+                
+                if(k==0)
+                {
+                  ctx.moveTo(x,y);
+                }
+                else
+                {
+                  ctx.lineTo(x,y);
+                }
+              }
+              ctx.strokeStyle = "gray";
+              ctx.stroke();
+            }
+          }
+        }
+      }
+    
+      //存储中国地图Mercator投影后的点的数组
+      var mercatorMap1_poi = map1_poi;	
+        //墨卡托投影
+      function MercatorProj1()
+      {
+        ctx1.clearRect(0,0,width,height);
+        mercatorChinaGrid(c1);
+        
+        //墨卡托投影坐标转换函数
+        function MercatorTrans(B,L)
+        {
+          var B0 = 0;  //原始纬线
+          var L0 = 0;  //中央经线
+          var a = 6378245;  //Krasovsky_1940椭球体的长半轴
+          var b = 6356863.01877;  //Krasovsky_1940椭球体的短半轴
+          var e = Math.sqrt((a*a-b*b)/(a*a));  //第一离心率
+          var e2 = Math.sqrt((a*a-b*b)/(b*b));  //第二离心率
+          
+          var K = (a*a/b)/Math.sqrt(1+e2*e2*Math.cos(B0*Math.PI/180)*Math.cos(B0*Math.PI/180))*Math.cos(B0*Math.PI/180);
+          var X = K*Math.log(Math.tan(Math.PI/4+B/2*Math.PI/180)*Math.pow((1-e*Math.sin(B*Math.PI/180))/(1+e*Math.sin(B*Math.PI/180)),e/2));
+          var Y = K*(L-L0);
+          
+          //返回的结果数组（含X,Y）,纵坐标X轴，横坐标Y轴
+          var result = new Array(X,Y);
+          return result;
+        }
+        
+        for(var i=0;i<mercatorMap1_poi.length;i++)
+        {
+          var r = mercatorMap1_poi[i];
+          if(r.constructor == Array)
+          {
+            var B = r[1];
+            var L = r[0];		  
+            var result = MercatorTrans(B,L);
+
+            mercatorMap1_poi[i][0] = result[0];  
+            mercatorMap1_poi[i][1] = result[1];
+          }
+        }
+        
+        //画中国地图
+        ctx1.beginPath();
+        var lineID = 1;
+        for(var i=0;i<mercatorMap1_poi.length;i++)
+        {
+          var r = mercatorMap1_poi[i];
+          if(r.constructor == Array)
+          {
+            var x1 = r[0];  //经度
+            var y1 = r[1];  //纬度	
+            var X1 = y1/10000000*11-425;
+            var Y1 = -x1/1000000*11+260;
+        
+            if(lineID == 1)
+            {
+              ctx1.moveTo(X1,Y1);
+              lineID++;
+            }
+            else
+            {
+              ctx1.lineTo(X1,Y1);
+            }
+          }
+          else
+          {
+            lineID = 1;
+          }
+        }
+        ctx1.lineWidth = document.getElementById("lineWidth1").value; 
+        ctx1.strokeStyle = document.getElementById("lineColor1").value;
+        ctx1.stroke();
+        
+        //画墨卡托投影后的中国地图网格
+        function mercatorChinaGrid(canvas)
+        {
+          w = 60;
+          h = 75;
+          if(canvas.getContext)
+          {
+            var ctx = canvas.getContext("2d");
+            ctx.lineWidth = 0.5;
+            //纵线
+            ctx.globalCompositeOperation = 'destination-over';
+            for( var i = 0; i * 5 <= h-5; i++ )
+            {
+              ctx.beginPath();
+              var x1 = 0;
+              var y1 = 0+i*5;
+              var x2 = w;
+              var y2 = 0+i*5;
+              
+              var result1 = MercatorTrans(x1,y1);
+              var result2 = MercatorTrans(x2,y2);
+
+              x1 = result1[1]/10000000*11+65;
+              y1 = -result1[0]/1000000*11+260;
+              x2 = result2[1]/10000000*11+65;
+              y2 = -result2[0]/1000000*11+260;
+              
+              ctx.moveTo(x1,y1);
+              ctx.lineTo(x2,y2);
+              ctx.strokeStyle = "gray";
+              ctx.stroke();
+            }
+            //横线
+            for( var j = 0; j * 5 <= w; j++ )
+            {
+              ctx.beginPath();
+              var x1 = j*5;
+              var y1 = 70;
+              var x2 = j*5;
+              var y2 = 140;
+              
+              var result1 = MercatorTrans(x1,y1);
+              var result2 = MercatorTrans(x2,y2);
+
+              x1 = result1[1]/10000000*11-425;
+              y1 = -result1[0]/1000000*11+260;
+              x2 = result2[1]/10000000*11-425;
+              y2 = -result2[0]/1000000*11+260;
+              
+              ctx.moveTo(x1,y1);
+              ctx.lineTo(x2,y2);
+              ctx.strokeStyle = "gray";
+              ctx.stroke();
+            }
+          }
+        }
+      }
+      
+      
+      //存储世界地图Mercator投影后的点的数组
+      var mercatorMap2_poi = map2_poi;	
+        //墨卡托投影
+      function MercatorProj2()
+      {
+        ctx2.clearRect(0,0,width,height);
+        mercatorWorldGrid(c2);
+        
+        //墨卡托投影坐标转换函数
+        function MercatorTrans(B,L)
+        {
+          var B0 = 0;  //原始纬线
+          var L0 = 0;  //中央经线
+          var a = 6378245;  //Krasovsky_1940椭球体的长半轴
+          var b = 6356863.01877;  //Krasovsky_1940椭球体的短半轴
+          var e = Math.sqrt((a*a-b*b)/(a*a));  //第一离心率
+          var e2 = Math.sqrt((a*a-b*b)/(b*b));  //第二离心率
+          
+          var K = (a*a/b)/Math.sqrt(1+e2*e2*Math.cos(B0*Math.PI/180)*Math.cos(B0*Math.PI/180))*Math.cos(B0*Math.PI/180);
+          var X = K*Math.log(Math.tan(Math.PI/4+B/2*Math.PI/180)*Math.pow((1-e*Math.sin(B*Math.PI/180))/(1+e*Math.sin(B*Math.PI/180)),e/2));
+          var Y = K*(L-L0);
+          
+          //返回的结果数组（含X,Y）
+          var result = new Array(X,Y);
+          return result;
+        }
+        
+        for(var i=0;i<mercatorMap2_poi.length;i++)
+        {
+          var r = mercatorMap2_poi[i];
+          if(r.constructor == Array)
+          {
+            var B = r[1];
+            var L = r[0];		  
+            var result = MercatorTrans(B,L);
+            
+            //纵坐标X轴,横坐标Y轴
+            mercatorMap2_poi[i][0] = result[0]; 
+            mercatorMap2_poi[i][1] = result[1];
+          }
+        }
+        
+        //画世界地图
+        ctx2.beginPath();
+        var lineID = 1;
+        for(var i=0;i<mercatorMap2_poi.length;i++)
+        {
+          var r = mercatorMap2_poi[i];
+          if(r.constructor == Array)
+          {
+            var x1 = r[0];  //height
+            var y1 = r[1];  //width	
+            var X1 = y1/10000000*2.5+320;
+            var Y1 = -x1/1000000*2.5+240;
+        
+            if(lineID == 1)
+            {
+              ctx2.moveTo(X1,Y1);
+              lineID++;
+            }
+            else
+            {
+              ctx2.lineTo(X1,Y1);
+            }
+          }
+          else
+          {
+            lineID = 1;
+          }
+        }
+        ctx2.lineWidth = document.getElementById("lineWidth2").value; 
+        ctx2.strokeStyle = document.getElementById("lineColor2").value;
+        ctx2.stroke();
+        
+        //画世界地图网格
+        function mercatorWorldGrid(canvas)
+        {
+          w = 360;
+          h = 180;
+          if(canvas.getContext)
+          {
+            var ctx = canvas.getContext("2d");
+            ctx.lineWidth = 0.5;
+            ctx.globalCompositeOperation = 'destination-over';
+            //横线
+            for( var j = 0; j * 5 <= h; j++ )
+            {
+              ctx.beginPath();
+              var x1 = -90+j*5;
+              var y1 = -180;
+              var x2 = -90+j*5;
+              var y2 = 180;
+              
+              var result1 = MercatorTrans(x1,y1);
+              var result2 = MercatorTrans(x2,y2);
+              x1 = result1[1]/10000000*2.5+320;
+              y1 = -result1[0]/1000000*2.5+240;
+              x2 = result2[1]/10000000*2.5+320;
+              y2 = -result2[0]/1000000*2.5+240;
+              
+              ctx.moveTo(x1,y1);
+              ctx.lineTo(x2,y2);
+              ctx.strokeStyle = "gray";
+              ctx.stroke();
+            }
+            //纵线
+            for( var i = 0; i * 5 <= w; i++ )
+            {
+              ctx.beginPath();
+              var x1 = -90;
+              var y1 = -180+i*5;
+              var x2 = 90;
+              var y2 = -180+i*5;
+  
+              var result1 = MercatorTrans(x1,y1);
+              var result2 = MercatorTrans(x2,y2);
+              if(result1[0]=Number.NEGATIVE_INFINITY)
+              {
+                result1[0] = -238068937.18556994;
+              }
+              x1 = -result1[1]/10000000*2.5+320;
+              y1 = result1[0]/10000000*2.5+240;
+              x2 = -result2[1]/10000000*2.5+320;
+              y2 = result2[0]/10000000*2.5+240;
+  
+              ctx.moveTo(x1,y1);
+              ctx.lineTo(x2,y2);
+              ctx.strokeStyle = "gray";
+              ctx.stroke();
+            }
+          }
+        }
+      }
+      
+      function Orthodrome()
+      {
+        //巴黎坐标(2.2, 48.52)
+        var lat1 = 48.52*Math.PI/180;
+        var lon1 = 2.2*Math.PI/180;
+        //北京坐标(116.4，39.8)
+        var lat2 = 39.8*Math.PI/180;
+        var lon2 = 116.4*Math.PI/180;
+        
+        //存储大圆航线的点的数组
+        var oxArray = new Array(9);
+        var oyArray = new Array(9);
+        var m0 = new Array(2);
+        var m1 = new Array(2);
+        var m2 = new Array(2);
+        var m3 = new Array(2);
+        var m4 = new Array(2);
+        var m5 = new Array(2);
+        var m6 = new Array(2);
+        var m7 = new Array(2);
+        var m8 = new Array(2);
+        
+        oxArray[0] = lon1/Math.PI*180;
+        oyArray[0] = lat1/Math.PI*180;
+        
+        oxArray[8] = lon2/Math.PI*180;
+        oyArray[8] = lat2/Math.PI*180;
+        
+        m0[0] = lat1;
+        m0[1] = lon1;
+        m8[0] = lat2;
+        m8[1] = lon2;
+        
+        var coor1 = MiddleValue(m0[0],m0[1],m8[0],m8[1]);
+        m4[0] = coor1[0];
+        m4[1] = coor1[1];
+        oyArray[4] = coor1[0]/Math.PI*180;
+        oxArray[4] = coor1[1]/Math.PI*180;
+        
+        var coor2 = MiddleValue(m4[0],m4[1],m8[0],m8[1]);
+        m6[0] = coor2[0];
+        m6[1] = coor2[1];
+        oyArray[6] = coor2[0]/Math.PI*180;
+        oxArray[6] = coor2[1]/Math.PI*180;
+        
+        var coor3 = MiddleValue(m6[0],m6[1],m8[0],m8[1]);
+        m7[0] = coor3[0];
+        m7[1] = coor3[1];
+        oyArray[7] = coor3[0]/Math.PI*180;
+        oxArray[7] = coor3[1]/Math.PI*180;
+        
+        var coor4 = MiddleValue(m0[0],m0[1],m4[0],m4[1]);
+        m2[0] = coor4[0];
+        m2[1] = coor4[1];
+        oyArray[2] = coor4[0]/Math.PI*180;
+        oxArray[2] = coor4[1]/Math.PI*180;
+        
+        var coor5 = MiddleValue(m0[0],m0[1],m2[0],m2[1]);
+        m1[0] = coor5[0];
+        m1[1] = coor5[1];
+        oyArray[1] = coor5[0]/Math.PI*180;
+        oxArray[1] = coor5[1]/Math.PI*180;
+  
+        var coor6 = MiddleValue(m4[0],m4[1],m6[0],m6[1]);
+        m5[0] = coor6[0];
+        m5[1] = coor6[1];
+        oyArray[5] = coor6[0]/Math.PI*180;
+        oxArray[5] = coor6[1]/Math.PI*180;
+        
+        var coor7 = MiddleValue(m2[0],m2[1],m4[0],m4[1]);
+        m3[0] = coor7[0];
+        m3[1] = coor7[1];
+        oyArray[3] = coor7[0]/Math.PI*180;
+        oxArray[3] = coor7[1]/Math.PI*180;
+        
+        function MiddleValue(lat1,lon1,lat2,lon2)
+        {
+          var Bx = Math.cos(lat2)*Math.cos(lon2-lon1);
+          var By = Math.cos(lat2)*Math.sin(lon2-lon1);
+          lat_m = Math.atan2(Math.sin(lat1)+Math.sin(lat2),Math.sqrt(Math.pow((Math.cos(lat1)+Bx),2)+By*By));
+          lon_m = lon1+Math.atan2(By,Math.cos(lat1)+Bx);
+          var result = [lat_m,lon_m];
+          return result;
+        }
+  
+        ctx2.beginPath();
+        //画大圆航线
+        for(var j=0;j<=oxArray.length-1;j++)
+        {
+          var X1 = (oxArray[j]+180)*1.5+45;
+          var Y1 = (90-oyArray[j])*1.5+100;
+          var X2 = (oxArray[j+1]+180)*1.5+45;
+          var Y2 = (90-oyArray[j+1])*1.5+100;
+  
+          ctx2.moveTo(X1,Y1);
+          ctx2.lineTo(X2,Y2);
+        }
+        ctx2.lineWidth = 1; 
+        ctx2.strokeStyle = "red";
+        ctx2.stroke();
+      }
+      
+    </script>
+    
+    </body>
+  </html>
