@@ -1,0 +1,367 @@
+<html>
+    <head>
+      <title>
+        多边形面积计算
+      </title>
+    </head>
+    <body>
+      <canvas id="canvas" width="640" height="480" style="border:1px dashed black;" ></canvas>
+      <br/>
+      <label>Gen文件:</label>
+      <input type="file" id="file" />
+      <input type="button" value="确定" onclick="assureFile()" /> 
+      <br/>
+      
+      <label>LineWidth:</label>
+      <input type="text" id="lineWidth" style="width:40px;" value="0.5">
+      <label>LineColor:</label>
+      <!-- 带值的下拉菜单 -->
+      <select id="lineColor">
+      <option value="rgb(0,0,0)" selected="black">black</option>
+      <option value="rgb(255,0,0)">red</option>
+      <option value="rgb(0,255,0)">green</option>
+      <option value="rgb(0,0,255)">blue</option>
+      </select>
+      <br/>	
+      <input type="button" value="refresh" onclick="refresh()"/>
+      <br/>
+      
+      <label style="text-align:left">geodetic coordinate system:</label>
+      <input type="button" value="display" onclick="GeodeticMap()" />
+      <br/>
+      <label id="s1" style="text-align:left"></label>
+      
+      <label style="text-align:left">geographic coordinate system:</label>
+      <input type="button" value="display" onclick="GeographicMap()" />
+      <br/>
+      <label id="s2" style="text-align:left"></label>
+      <br/>
+      
+      <script>
+        var c = document.getElementById("canvas");
+        var ctx = c.getContext("2d");
+        var width = parseInt(c.width);
+        var height = parseInt(c.height);
+        
+        var a = 6378245;  //Krasovsky_1940椭球体的长半轴
+        var b = 6356863.01877;  //Krasovsky_1940椭球体的短半轴
+        var e = Math.sqrt(a*a-b*b)/a;  //第一离心率
+        var e2 = Math.sqrt(a*a-b*b)/b;  //第二离心率
+  
+        //存储原始数据中地图的点的数组
+        var map_poi = new Array();
+        //存储经纬度下地图的点的数组
+        var poi = new Array();
+        
+        //刷新画布的函数
+        function refresh(text)
+        {
+          ctx.clearRect(0,0,width,height);
+        }
+        
+        //确定文件的函数
+        function assureFile()
+        {
+          var file = document.getElementById("file").files[0];
+          if(file!=null)
+          {
+            var reader =new FileReader();
+            reader.readAsText(file);
+            reader.onload=function(e)
+            {
+                var geom = this.result;
+              readAndSavePoi(map_poi,geom);			
+            }
+          }
+        }
+        
+        //存储地图坐标的函数
+        function readAndSavePoi(map_poi,geom)
+        {
+          var lines = geom;  //存储字符串形式的几何对象
+          var line = new Array();
+          line = lines.split("END\r\n");  //存储字符串形式的线几何对象
+          for(var j=0;j<line.length;j++)
+          {
+            var rows = line[j];
+            var row = new Array();
+            row = rows.split("\r\n");  //存储字符串形式的一行（一对点）
+              
+            var oneOrNot = 1;
+            for(var k=0;k<row.length;k++)
+            {
+              if(row[k].search(",")!=-1)
+              {
+                var points = row[k];
+                  var point = new Array();  //存储字符串形式的横或纵坐标，0为x，1为y
+                point = points.split(",");
+                    
+                var xy = new Array();
+                xy.push(parseFloat(point[0]));
+                xy.push(parseFloat(point[1]));
+                map_poi.push(xy);  //存储数字形式的一对点（一个数组）的数组
+                if(row[k+1].search(",")==-1)
+                {
+                  map_poi.push(0);
+                }
+              }
+              else
+              {
+                if(Number(row[k])!=0)
+                {
+                  map_poi.push(Number(row[k]));
+                }
+              }
+            }
+          }
+        }
+        
+        //画大地坐标系下地图的函数
+        function GeodeticMap()
+        {
+          ctx.beginPath();
+          var lineID = 1;
+          var scale = 6;
+          for(var i=0;i<map_poi.length;i++)
+          { 
+            r = map_poi[i];
+            if(r.constructor == Array)
+            {		
+              var X = r[0]/10000*scale-7650;  
+              var Y = -r[1]/10000*scale+2560;
+              
+              if(lineID==1)
+              {
+                ctx.moveTo(X,Y);
+                lineID++;
+              }
+              else
+              {
+                ctx.lineTo(X,Y);
+              }			
+            }
+            else
+            {
+              lineID = 1;
+            }
+          }
+          ctx.lineWidth = document.getElementById("lineWidth").value; 
+          ctx.strokeStyle = document.getElementById("lineColor").value;
+          ctx.stroke();
+          document.getElementById("s1").innerText = GeodeticPolygonArea();
+        }
+        
+        //画地理坐标系下地图的函数
+        function GeographicMap()
+        {
+          poi = map_poi;
+          ctx.beginPath();
+          var lineID = 1;
+          for(var i=0;i<map_poi.length;i++)
+          { 
+            r = map_poi[i];
+            if(r.constructor == Array)
+            {
+              var B = MercatorToBL(r[1],r[0])[0];
+              var L = MercatorToBL(r[1],r[0])[1];
+              poi[i][0] = L;
+              poi[i][1] = B;			
+              var x = L;
+              var y = 90-B;
+              
+              var X = x*75-8625;
+              var Y = y*75-4040;
+              
+              if(lineID==1)
+              {
+                ctx.moveTo(X,Y);
+                lineID++;
+              }
+              else
+              {
+                ctx.lineTo(X,Y);
+              }			
+            }
+            else
+            {
+              lineID = 1;
+            }
+          }
+          ctx.lineWidth = document.getElementById("lineWidth").value; 
+          ctx.strokeStyle = document.getElementById("lineColor").value;
+          ctx.stroke();
+          document.getElementById("s2").innerText = GeographicPolygonArea();
+        }
+        
+        function MercatorToBL(X,Y)
+        {
+          var B0 = 0;  //原始纬线的弧度
+          var L0 = 0;  //中央经线的弧度
+          
+          var K = (a*a/b)/Math.sqrt(1+e2*e2*Math.cos(B0)*Math.cos(B0))*Math.cos(B0);
+              
+          var B1 = (30+45/60)*Math.PI/180;	//基准纬线
+          
+          var L = Y/K + L0;
+          
+          while(1)
+          {
+            var B2 = (Math.PI/2 - 2*Math.atan(Math.exp(-X/K) * Math.exp(e/2*Math.log((1-e*Math.sin(B1))/(1+e*Math.sin(B1))))));
+            var T = Math.abs(B2-B1);
+            if(T<0.00000000001)
+            {
+              break;
+            }
+            B1 = B2;
+          }
+          
+          var result = [B2*180/Math.PI,L*180/Math.PI];  //角度
+          return result;
+        }
+        
+        //大地坐标系下多边形面积计算函数
+        function GeodeticPolygonArea()  
+        {  
+          var s = [0,0,0,0,0,0,0,0,0,0,0,0,0,0];  //存储各个几何对象的面积的数组
+  
+          var coup_poi = new Array();  //对象为一条边，存点的x,y坐标
+          var poly_poi =  new Array();  //对象为同一ID的单多边形，存一条边
+          var polys_poi = new Array();  //对象为多边形，存单多边形
+          
+          for(var i=0;i<map_poi.length;i++)
+          { 
+            var r = map_poi[i];
+            if(r.constructor == Array)
+            {
+              coup_poi.push(r[0]);
+              coup_poi.push(r[1]);
+              poly_poi.push(coup_poi);
+            }
+            else
+            {
+              if(Number(r)!=0)
+              {
+                var lineID = Number(r);
+              }
+              else
+              {
+                polys_poi.push(poly_poi);
+                var geom_area = CalculateArea(poly_poi)/1000000;
+                s[lineID] += parseFloat(geom_area);
+                poly_poi = new Array();
+              }
+            }
+            coup_poi = new Array();
+          }
+          
+          var areaText = "area of cities\n";  //输出结果字符串
+          var city = ["","连云港市","徐州市","宿迁市","盐城市","淮安市","泰州市","南通市","扬州市","南京市","镇江市","常州市","无锡市","苏州市"];
+          for(var n=1;n<s.length;n++)
+          {
+            areaText += city[n]+": "+s[n].toFixed(2)+" km^2";
+            if(n!=s.length)
+            {
+              areaText += "\n";
+            }
+          }
+          return areaText;
+          
+          function CalculateArea(poly_poi)
+          { 
+            var area = 0;
+            for(var j=0;j<poly_poi.length;j++)
+            {
+              var k = (j+1)%poly_poi.length;
+              var x1 = poly_poi[j][0];
+              var y1 = poly_poi[j][1];
+              var x2 = poly_poi[k][0];
+              var y2 = poly_poi[k][1];
+              area += x1*y2;
+              area -= x2*y1;
+            }
+            area /= 2;
+            return Math.abs(area);
+          }
+        }		
+        
+        //计算椭球体上某区域面积的函数
+        function GeographicPolygonArea()
+        { 
+          var s = [0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+          var B0 = (30+45/60)*Math.PI/180;  //基准纬线
+          
+          var coup_poi = new Array();  //对象为一条边，存点的x,y坐标
+          var poly_poi =  new Array();  //对象为同一ID的单多边形，存一条边
+          var polys_poi = new Array();  //对象为多边形，存单多边形
+          
+          for(var i=0;i<map_poi.length;i++)
+          { 
+            var r = map_poi[i];
+            if(r.constructor == Array)
+            {
+              coup_poi.push(r[0]);
+              coup_poi.push(r[1]);
+              poly_poi.push(coup_poi);
+            }
+            else
+            {
+              if(Number(r)!=0)
+              {
+                var lineID = Number(r);
+              }
+              else
+              {
+                polys_poi.push(poly_poi);
+                var geom_area = CalculateArea1(poly_poi)/1000000;
+                s[lineID] += parseFloat(geom_area);
+                poly_poi = new Array();
+              }
+            }
+            coup_poi = new Array();
+          }
+          
+          var areaText = "area of cities\n";  //输出结果字符串
+          var city = ["","连云港市","徐州市","宿迁市","盐城市","淮安市","泰州市","南通市","扬州市","南京市","镇江市","常州市","无锡市","苏州市"];
+          for(var n=1;n<s.length;n++)
+          {
+            areaText += city[n]+": "+s[n].toFixed(2)+" km^2";
+            if(n!=s.length-1)
+            {
+              areaText += "\n";
+            }
+          }
+          return areaText;
+                  
+          function CalculateArea1(poly_poi)
+          {
+            var area = 0;  //单个几何对象的面积
+            var B0 = (30+45/60)*Math.PI/180;  //基准纬线
+            for(var i=0;i<poly_poi.length-1;i++)
+            {
+              var r1 = poly_poi[i];
+              var r2 = poly_poi[i+1];
+  
+              var B1 = r1[1]*Math.PI/180;
+              var L1 = r1[0]*Math.PI/180;
+              var B2 = r2[1]*Math.PI/180;
+              var L2 = r2[0]*Math.PI/180;
+              
+              var B3 = (B1+B2)/2;
+              var TB = B3-B0;
+              var AB = (B3+B0)/2;
+  
+              var K = 2*a*a*(1-e*e)*(L2-L1);
+              var A = 1+1/2*Math.pow(e,2)+3/8*Math.pow(e,4)+5/16*Math.pow(e,6);
+              var B = 1/6*Math.pow(e,2)+3/16*Math.pow(e,4)+3/16*Math.pow(e,6);
+              var C = 3/80*Math.pow(e,4)+1/16*Math.pow(e,6);
+              var D = 1/112*Math.pow(e,6);
+                
+              area += K*(A*Math.sin(TB/2)*Math.cos(AB)-B*Math.sin(3*TB/2)*Math.cos(3*AB)+C*Math.sin(5*TB/2)*Math.cos(5*AB)-D*Math.sin(7*TB/2)*Math.cos(7*AB));			
+            }
+            return Math.abs(area);
+          }
+        }
+        
+      </script>
+    </body>
+  </html>
