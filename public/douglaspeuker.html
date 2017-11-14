@@ -1,0 +1,545 @@
+<html>
+    <head>
+      <title>
+        coordinate transform
+      </title>
+    </head>
+    <body>
+    <canvas id="canvas1" width="640" height="480" style="border:1px dashed black;" ></canvas>
+    <br/>
+     
+    <label style="text-align:left"/>Gen文件:</label>
+    <input type="file" id="file1" />
+    <input type="button" value="确定" style="margin-left:0px" onclick="assureFile()" />
+    </br>
+  
+    <label style="text-align:left">LineWidth:</label>
+    <input type="text" id="lineWidth1" style="width:40px;" value="0.5">
+    </br>
+    
+    <label  style="text-align:left">LineColor:</label>
+    <!-- 带值的下拉菜单 -->
+    <select id="lineColor1">
+    <option value="rgb(0,0,0)" selected="black">black</option>
+    <option value="rgb(255,0,0)">red</option>
+    <option value="rgb(0,255,0)">green</option>
+    <option value="rgb(0,0,255)">blue</option>
+    </select>
+    <br/>
+    
+    <label style="text-align:left">China Map:</label>
+    <input type="button" value="display" onclick="paintChina()" />
+    <input type="button" value="refresh" onclick="refresh('China')"/>
+    </br>
+    
+    <label style="text-align:left">Projection:</label>
+    <input type="button" value="Lambert" onclick="LambertProj1()" /> 
+    </br>
+    
+    <label style="text-align:left">Tolerance:</label>
+    <input type="text" id="tolerance" style="width:75px;" value="1000"> 
+    <input type="button" value="DPpress" onclick="compress()" /> 
+    <input type="button" value="display" onclick="paintChina1()" />
+    </br>
+    
+    <label style="text-align:left">Compression Ratio:</label>
+    <div id="ratio"></div>
+    </br>
+    
+    <script type="text/javascript">
+      var c1 = document.getElementById("canvas1");
+      var ctx1 = c1.getContext("2d");
+      
+      var width = parseInt(c1.width);
+      var height = parseInt(c1.height);
+      var x_scale = width/360;
+      var y_scale = height/180;
+    
+      //存储每个地图的点的数组
+      var map1_poi = new Array();
+      var map2_poi = new Array();
+  
+      //刷新画布的函数
+      function refresh(text)
+      {
+        if(text=='China')
+        {
+          ctx1.clearRect(0,0,width,height);
+        }
+      }
+    
+      //确定的函数
+      function assureFile()
+      {
+        var file1 = document.getElementById("file1").files[0];
+        if(file1!=null)
+        {
+          var reader1 =new FileReader();
+          reader1.readAsText(file1);
+          reader1.onload=function(e)
+          {
+              var geom1 = this.result;
+            readAndSavePoi(map1_poi,geom1);			
+          }
+        }
+      }
+    
+      //存储地图坐标的函数
+      function readAndSavePoi(map_poi,geom)
+      {
+        var lines = geom;  //存储字符串形式的几何对象
+        var line = new Array();
+        line = lines.split("END\r\n");  //存储字符串形式的线几何对象
+        for(var j=0;j<line.length;j++)
+        {
+          var rows = line[j];
+          var row = new Array();
+          row = rows.split("\r\n");  //存储字符串形式的一行（一对点）
+              
+          var oneOrNot = 1;
+          for(var k=0;k<row.length;k++)
+          {
+            if(row[k].search(",")!=-1)
+            {
+              var points = row[k];
+              var point = new Array();  //存储字符串形式的横或纵坐标，0为x，1为y
+              point = points.split(",");
+                    
+              var xy = new Array();
+              xy.push(parseFloat(point[0]));
+              xy.push(parseFloat(point[1]));
+              map_poi.push(xy);  //存储数字形式的一对点（一个数组）的数组
+            }
+            else
+            {
+              map_poi.push(Number(row[k]));
+            }
+          }
+        }
+      }
+    
+      //基于北京54画中国地图的函数
+      function paintChina()
+      {
+        ctx1.beginPath();
+        var lineID = 1;
+        var factor1 = 6;  //缩放因子
+        bj54ChinaGrid(c1,factor1);
+        for(var i=0;i<map1_poi.length;i++)
+        {
+          var r = map1_poi[i];
+          if(r.constructor == Array)
+          {
+            var x = r[0];
+            var y = r[1];
+            var X = (x+180-234)*factor1;
+            var Y = (90-y-20)*factor1;
+        
+            if(lineID == 1)
+            {
+              ctx1.moveTo(X,Y);
+              lineID++;
+            }
+            else
+            {
+              ctx1.lineTo(X,Y);
+            }
+          }
+          else
+          {
+            lineID = 1;
+          }
+        }
+        ctx1.lineWidth = document.getElementById("lineWidth1").value; 
+        ctx1.strokeStyle = document.getElementById("lineColor1").value;
+        ctx1.stroke();
+        
+        //画北京54中国地图格网
+        function bj54ChinaGrid(canvas,factor1)
+        {
+          w = 70;
+          h = 65;
+          if(canvas.getContext)
+          {
+            var ctx = canvas.getContext("2d");
+            ctx.lineWidth = 0.5;
+            //横线
+            ctx.globalCompositeOperation = 'destination-over';
+            for( var i = 0; i * 5 <= h; i++ )
+            {
+              ctx.beginPath();
+              var x1 = 0;
+              var y1 = i*5;
+              var x2 = w;
+              var y2 = i*5;
+              x1 = (x1+180-234)*factor1+324+100-3;
+              x2 = (x2+180-234)*factor1+324+100-3;
+              y1 = (90-y1-20)*factor1-3;
+              y2 = (90-y2-20)*factor1-3;
+              
+              ctx.moveTo(x1,y1);
+              ctx.lineTo(x2,y2);
+              ctx.strokeStyle = "gray";
+              ctx.stroke();
+            }
+            //纵线
+            for( var j = 0; j * 5 <= w; j++ )
+            {
+              ctx.beginPath();
+              var x1 = j*5;
+              var y1 = 0;
+              var x2 = j*5;
+              var y2 = h;
+              x1 = (x1+180-234)*factor1+324+100-3;
+              x2 = (x2+180-234)*factor1+324+100-3;
+              y1 = (90-y1-20)*factor1-3;
+              y2 = (90-y2-20)*factor1-3;
+              
+              ctx.moveTo(x1,y1);
+              ctx.lineTo(x2,y2);
+              ctx.strokeStyle = "gray";
+              ctx.stroke();
+            }
+          }
+        }
+      }
+      
+      //兰勃特投影坐标转换的函数
+      function LambertTrans(B,L)
+      {
+        var B1 = 20*Math.PI/180;  //第一标准纬线
+        var B2 = 40*Math.PI/180;  //第二标准纬线
+          
+        var a = 6378245;  //Krasovsky_1940椭球体的长半轴
+        var B0 = 0;  //原点纬线	
+        var L0 = 105*Math.PI/180;  //中央经线 
+        var e2 = 0.006693421622966;  //Krasovsky_1940椭球体的第一偏心率
+        var e = Math.sqrt(e2);
+  
+        var m = Math.cos(B)/Math.sqrt(1-e2*Math.pow(Math.sin(B),2));
+        var m_B1 = Math.cos(B1)/Math.sqrt(1-e2*Math.pow(Math.sin(B1),2));
+        var m_B2 = Math.cos(B2)/Math.sqrt(1-e2*Math.pow(Math.sin(B2),2));
+          
+        var t = Math.tan(Math.PI/4-B/2)/Math.pow(((1-e*Math.sin(B))/(1+e*Math.sin(B))),e/2);
+        var t_B0 = Math.tan(Math.PI/4-B0/2)/Math.pow(((1-e*Math.sin(B0))/(1+e*Math.sin(B0))),e/2);
+        var t_B1 = Math.tan(Math.PI/4-B1/2)/Math.pow(((1-e*Math.sin(B1))/(1+e*Math.sin(B1))),e/2);
+        var t_B2 = Math.tan(Math.PI/4-B2/2)/Math.pow(((1-e*Math.sin(B2))/(1+e*Math.sin(B2))),e/2);
+          
+        var n = Math.log(m_B1/m_B2)/Math.log(t_B1/t_B2);		
+  
+        var F = m_B1/(n*Math.pow(t_B1,n));
+        var r = a*F*Math.pow(t,n);  //转换点纬度处的r值
+        var r0 = a*F*Math.pow(t_B0,n);  //原点纬度处的r值
+        var theta = n*(L-L0);  //弧度值
+              
+        //返回的结果数组（含r0,r,theta）
+        var result = new Array(r0,r,theta);
+        return result;
+      }	
+      
+      //画Lambert投影后的中国地图网格
+      function lambertChinaGrid(canvas)
+      {
+        w = 60;
+        h = 75;
+        if(canvas.getContext)
+        {
+          var ctx = canvas.getContext("2d");
+          ctx.lineWidth = 0.5;
+          //纵线
+          ctx.globalCompositeOperation = 'destination-over';
+          ctx.beginPath();
+          for( var i = 0; i * 5 <= h-5; i++ )
+          {
+            var x1 = 0;
+            var y1 = 70+i*5;
+            var x2 = w;
+            var y2 = 70+i*5;
+              
+            var result1 = LambertTrans(x1*Math.PI/180,y1*Math.PI/180);
+            var result2 = LambertTrans(x2*Math.PI/180,y2*Math.PI/180);
+              
+            var X1 = (result1[0]-result1[1]*Math.cos(result1[2]))/10000;
+            var Y1 = result1[1]*Math.sin(result1[2])/10000;
+              
+            var X2 = (result2[0]-result2[1]*Math.cos(result2[2]))/10000;
+            var Y2 = result2[1]*Math.sin(result2[2])/10000;
+  
+            var y1 = -X1*0.6+450;
+            var x1 = -Y1*0.64+298;
+              
+            var y2 = -X2*0.6+450;
+            var x2 = -Y2*0.64+298;
+              
+            ctx.moveTo(x1,y1);
+            ctx.lineTo(x2,y2);
+            ctx.strokeStyle = "gray";
+             ctx.lineWidth = 0.2;
+            ctx.stroke();
+          }
+          //横线
+          for(var j=0; j * 5 <= w; j++)
+          {
+            ctx.beginPath();
+            for(var k=0; k * 5 <= h-5; k++)
+            {
+              var x = j*5;
+              var y = 70+k*5;
+                
+              var result = LambertTrans(x*Math.PI/180,y*Math.PI/180);
+              var X = (result[0]-result[1]*Math.cos(result[2]))/10000;
+              var Y = result[1]*Math.sin(result[2])/10000;
+                
+              var y = -X*0.6+450;
+              var x = -Y*0.64+298;
+                
+              if(k==0)
+              {
+                ctx.moveTo(x,y);
+              }
+              else
+              {
+                ctx.lineTo(x,y);
+              }
+            }
+            ctx.strokeStyle = "gray";
+            ctx.lineWidth = 0.2;
+            ctx.stroke();
+          }
+        }
+      }	
+      
+      //存储中国地图Lambert投影后的点的数组
+      var lambertMap1_poi = map1_poi;	  
+      //兰勃特投影
+      function LambertProj1()
+      {
+        ctx1.clearRect(0,0,width,height);
+        
+        for(var i=0;i<lambertMap1_poi.length;i++)
+        {
+          var r = lambertMap1_poi[i];
+          if(r.constructor == Array)
+          {
+            var B = r[1]*Math.PI/180;
+            var L = r[0]*Math.PI/180;	  
+            var result = LambertTrans(B,L);
+            
+            var r0 = result[0];
+            var r = result[1];
+            var theta = result[2];  //theta值为弧度
+            //纵坐标X轴,横坐标Y轴
+            var X = r0-r*Math.cos(theta);
+            var Y = r*Math.sin(theta);
+            
+            lambertMap1_poi[i][0] = X/10000;  
+            lambertMap1_poi[i][1] = Y/10000;
+          }
+        }
+        
+        //画兰勃特投影后的中国地图
+        ctx1.beginPath();
+        var lineID = 1;
+        for(var i=0;i<lambertMap1_poi.length;i++)
+        {
+          var r = lambertMap1_poi[i];
+          if(r.constructor == Array)
+          {
+            var x1 = r[1];  //height
+            var y1 = r[0];  //width	
+  
+            var X1 = x1*0.6+310;
+            var Y1 = -y1*0.6+460;
+                      
+            if(lineID == 1)
+            {
+              ctx1.moveTo(X1,Y1);
+              lineID++;
+            }
+            else
+            {
+              ctx1.lineTo(X1,Y1);
+            }
+          }
+          else
+          {
+            lineID = 1;
+          }
+        }
+        ctx1.lineWidth = document.getElementById("lineWidth1").value; 
+        ctx1.strokeStyle = document.getElementById("lineColor1").value;
+        ctx1.stroke();
+        lambertChinaGrid(c1);
+      }
+          
+      var mark = new Array();	  //标记是否抽稀点的数组
+      var geom_len = new Array();  //统计各序号几何对象数组点的长度
+      //var therehold = document.getElementById("tolerance");
+      var therehold = 0.00001;
+      
+      function compress()
+      {
+        var sum = 0;  //总点数
+        var rest = 0;  //压缩后的点数
+        var num;
+  
+        for(var j=0;j<lambertMap1_poi.length-1;j++)
+        {
+          var r = lambertMap1_poi[j];
+          var a;
+          var b;
+          if(r.constructor == Array)
+          {
+            mark[j] = false;  //标记是否抽稀点的数组
+            num++;
+              if(j==lambertMap1_poi.length-1)
+            {
+              geom_len.push(num);
+              DPpress(a,b,mark);
+            }
+          }
+          else
+          {
+            mark[j] = r;
+            if(r==0)
+            {
+              geom_len.push(num);
+              b = a+num-1;
+              DPpress(a,b,mark);
+            }
+            else
+            {
+              a = j+1;
+            }
+            num = 0;
+          }
+        }
+        
+        //压缩率
+        for(var l=0;l<mark.length;l++)
+        {
+          var b = mark[l];
+          if(typeof(b)=="boolean")
+          {
+            sum++;
+            if(!b)
+            {
+              rest++;
+            }
+          }
+        }
+        var result = Math.round((rest/sum)*10000)/100;
+        var ratio = document.getElementById("ratio");
+        ratio.innerHTML= result+'%';
+      
+        //压缩点的函数
+        function DPpress(a,b,mark)
+        {
+          var maxNo = 0;
+          var maxdis = 0;
+          var m = 0;  //m represents middle
+          var c = 0;
+          DPSimp(a,b);
+  
+          function deletePoi(a,b,mark)
+          {
+            for(var c=a+1;c<b;c++)
+            {
+              mark[c] = true;
+            }
+          }
+    
+          function DPSimp(a,b)
+          {
+            if(b-a>=2)
+            {
+              var x1 = lambertMap1_poi[a][0]*10000;
+              var y1 = lambertMap1_poi[a][1]*10000;
+              var x2 = lambertMap1_poi[b][0]*10000;
+              var y2 = lambertMap1_poi[b][1]*10000;
+              //两点式Ax+By+C=0
+              var A = (y1-y2)/(x1-x2);
+              var B = -1;
+              var C = (x1*y2-x2*y1)/(x1-x2);
+              
+              maxdis = 0;
+              //var lm = ppDistance(a,b);
+              m = a+1;
+              while(m<b)
+              {
+                var curdis = 0;
+   
+                var xm = lambertMap1_poi[m][0]*10000;
+                var ym = lambertMap1_poi[m][1]*10000;
+                
+                curdis = (A*xm+B*ym+C)/Math.sqrt(A*A+B*B);
+          
+                if(maxdis<=curdis)
+                {
+                  maxdis = curdis;
+                  maxNo = m;
+                }
+                m++;
+              }
+        
+              if(maxdis>=therehold)
+              {
+                DPSimp(a,maxNo);
+                DPSimp(maxNo,b);
+              }
+              else
+              {
+                deletePoi(a,b,mark);
+              }
+            }
+          }
+        }	  
+      }
+      
+      //画压缩后的兰勃特投影下的中国（基于兰勃特投影后的坐标）
+      function paintChina1()
+      {
+        ctx1.clearRect(0,0,width,height);
+        ctx1.beginPath();
+        var lineID = 1;
+        for(var i=0;i<mark.length;i++)
+        {
+          var b = mark[i];
+          var r = lambertMap1_poi[i];
+          if(typeof(b) == "boolean")
+          {
+            if(!b)
+            {
+              var x1 = r[1];  //height
+              var y1 = r[0];  //width	
+            
+              var X1 = x1*0.6+310;
+              var Y1 = -y1*0.6+460;
+                      
+              if(lineID == 1)
+              {
+                ctx1.moveTo(X1,Y1);
+                lineID++;
+              }
+              else
+              {
+                ctx1.lineTo(X1,Y1);
+              }
+              lineID++;
+            }
+          }
+          else
+          {
+            lineID = 1;
+          }
+        }
+        ctx1.lineWidth = document.getElementById("lineWidth1").value; 
+        ctx1.strokeStyle = document.getElementById("lineColor1").value;
+        ctx1.stroke();
+        lambertChinaGrid(c1);
+      }
+      
+    </script>
+    
+    </body>
+  </html>
