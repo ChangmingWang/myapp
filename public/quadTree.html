@@ -1,0 +1,300 @@
+<html>
+    <head>
+      <title>
+        quadTree
+      </title>
+    </head>
+    <body>
+      请选择文本文件:<input type="file" id="file" />
+      <br/><br/>
+      <input type="button" value="读取文本文件" onclick="readAndSave()"/>
+      <div id="content">
+      <!-- 这里显示文件内容 -->
+      </div>
+      <br/>
+      
+      <input type="button" value="四叉树四进制M码" onclick="output()"/>
+      <div name="Mcode" id="Mcode">
+      <!--这里显示编码内容-->
+      </div>
+      
+      <script>
+        var matrix = new Array();
+        var row;  //矩阵行
+        var col;  //矩阵列
+        //读取文件内容
+        function readAndSave()
+        {
+          var file=document.getElementById("file").files[0];
+          var reader=new FileReader();
+          reader.readAsText(file);
+          reader.onload=function(e)
+          {
+            var content = document.getElementById("content");
+            var fileStr = this.result;
+            var rows = fileStr.split("\r\n");
+            row = Number(rows[0].split(",")[0]);
+            col = Number(rows[0].split(",")[1]);
+            var eachRow = new Array();
+            
+            for(var i=0;i<row;i++)
+            {
+              matrix[i] = new Array();
+              for(var j=0;j<col;j++)
+              {
+                matrix[i][j] = 0;
+              }
+            }		  
+            
+            for(var i=0;i<row;i++)
+            {
+              eachRow = rows[i+1];
+              var each = eachRow.substr(0,23).split(",");  //存一行单个元素的数组
+              for(var j=0;j<col;j++)
+              {
+                matrix[i][j] = Number(each[j]);
+              }
+            }
+            
+            for(var i=0;i<row;i++)
+            {
+              for(var j=0;j<col;j++)
+              {
+                content.innerHTML += matrix[i][j]+"&nbsp;";
+              }
+              content.innerHTML += "</br>";
+            }
+          }
+        }
+        
+  
+        var code = matrix;  //矩阵
+        
+        var Mcode;  //位置码，位置码=层次码+深度码
+        for(var i=0;i<row;i++)
+        {
+          Mcode[i] = new Array();
+          for(var j=0;j<col;j++)
+          {
+            Mcode[i][j] = new Array(0,0,0);
+          }
+        }
+        
+        var layer = new Array();  //层次码
+        for(var i=0;i<4;i++)
+        {
+          layer[i] = new Array();
+          for(var j=0;j<2;j++)
+          {
+            layer[i][j] = 0;
+          }
+        }	
+         
+        <!-- for(var i=0;i<row;i++) -->
+        <!-- { -->
+          <!-- binaryMatrix[i] = new Array(); -->
+          <!-- for(var j=0;j<col;j++) -->
+          <!-- { -->
+            <!-- binaryMatrix[i][j] = matrix[i][j]; -->
+          <!-- } -->
+        <!-- }		 -->
+        
+        //判断数是否相等
+        function eq(m,n)
+        {
+          if(m==n)
+          {
+            return 1;
+          }
+          else
+          {
+            return 0;
+          }
+        }
+        
+        //将数的行列号转换为二进制
+        function toBinary(k)
+        {
+          var s = new Array(10);
+          var rem;
+          var i=0;
+          var t=0;
+          var b=0;  //二进制的值
+          do
+            {
+              rem = k%2;
+              k = k/2;
+              s[i++] = rem;
+            }
+          while(k!=0);
+          
+          for(var j=i-1;j>=0;j--)
+          {
+            b += s[j]*Math.pow(10.0,j);
+          }
+          return b;
+        }
+  
+        var b = new Array();  //位置码，位置码=层次码+深度码
+        for(var i=0;i<row;i++)
+        {
+          b[i] = new Array();
+          for(var j=0;j<col;j++)
+          {
+            b[i][j] = new Array(0,0,0);
+          }
+        }	  
+        var c = new Array();
+        for(var i=0;i<4;i++)
+        {
+          c[i] = new Array();
+          for(var j=0;j<2;j++)
+          {
+            c[i][j] = 0;
+          }
+        }	  
+        //判断数组c表示的矩形范围内的值是否一样，若一样就更新数组b
+        function judge(code,b,c)
+        {
+          for(var i=0; i<4; i++)
+          {
+            var w = 0;
+            for(var m=c[i][0];m<c[i][0]+2;m++)
+            {
+              for(var n=c[i][1]+1;n<c[i][0]+1;n++)
+              {
+                w += eq(code[m][n],code[m][n+1]);
+              }
+            }
+            if(w==2)  //4个值属性一样
+            {
+              for(var m=c[i][0];m < c[i][0]+2; m++)
+              {
+                for(var n=c[i][1];n < c[i][1]+2; n++)
+                {
+                  Mcode[m][n][0] = Mcode[(c[i][0])][(c[i][1])][0];
+                  Mcode[m][n][1] = Mcode[(c[i][0])][(c[i][1])][1];
+                  Mcode[m][n][2] = 99999999;
+                }
+              }
+            }		  
+          }
+        }
+        
+        //合并同类
+        function checkCombine(code,Mcode)
+        {
+          var c = [[0,0],[0,4],[4,0],[4,4]];
+          for(var i=0; i<4; i++)
+          {
+            var w = 0;
+  
+            for(var m=c[i][0]; m<4; m++)
+            {
+              for(var n=c[i][1]; n<3; n++)
+              {
+                w += eq(code[m][n],code[m][n+1]);
+              }
+            }
+            
+            if(w==12)  //16个属性一样
+            {
+              for(var m=c[i][0]; m<c[i][0]+4; m++)
+              {
+                for(var n=c[i][1]; n<c[i][1]+4; n++)
+                {
+                  Mcode[m][n] = Mcode[c[i][0]][c[i][1]];
+                  Mcode[m][n+1] = 99999999;
+                  Mcode[m][n+2] = 99999999;
+                }
+              }
+            }
+          }
+          var d = [[0,0],[0,2],[2,0],[2,2]];
+          var e = [[0,4],[0,6],[2,4],[2,6]];
+          var f = [[4,0],[4,2],[6,0],[6,2]];
+          var g = [[4,4],[4,6],[6,4],[6,6]];
+          judge(code, Mcode, d);
+          judge(code, Mcode, e);
+          judge(code, Mcode, f);
+          judge(code, Mcode, g);		
+        }
+        
+        //将四进制的M码按照规定格式——Mcode输出
+        function change(matrix,Mcode)  
+        {
+          var q;
+          for(var i=0;i<matrix.length;i++)
+          {
+            for(var j=0;j<matrix[i].length;j++)
+            {
+              var t = new Array(3);
+              q = matrix[i][j];
+              t[0] = q/100;
+              q = q%100;
+              t[1] = q/10;
+              q =q%10;
+              t[2] = q;
+  
+              Mcode[i][j][0] = t[0];
+              Mcode[i][j][1] = t[1];
+              Mcode[i][j][2] = t[2];			
+            }
+          }
+        }
+        
+        var binary = new Array();
+        //得到四进制M码
+        function fourDecimal(binary)
+        {
+          for(var i=0;i<matrix.length;i++)
+          {
+            binary[i] = new Array();
+            for(var j=0;j<matrix[i].length;j++)
+            {
+              var m = toBinary(i);
+              var n = toBinary(j);
+              binary[i][j] = 2*m+n;
+            }
+          }
+        }
+        
+        //输出	  
+        function output()
+        {
+          var Mcode = document.getElementById("Mcode");		
+          fourDecimal(binary);
+          change(matrix,Mcode);
+          checkCombine(code,Mcode);		
+          var a = Mcode;
+          
+          for(var i=0;i<row;i++)
+          {
+            for(var j=0;j<col;j++)
+            {
+              if(a[i][j+1]==99999999&&a[i][j+2]==99999999)
+              {
+                Mcode.innerHTML += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
+                Mcode.innerHTML += a[i][j][0].toString();
+              }
+              else
+              {
+                if(a[i][j+2]==99999999)
+                {
+                  Mcode.innerHTML += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
+                  Mcode.innerHTML += a[i][j][0].toString()+a[i][j][1].toString();
+                }
+                else
+                {
+                  Mcode.innerHTML += "&nbsp;&nbsp;&nbsp;&nbsp;";
+                  Mcode.innerHTML += a[i][j][0].toString()+a[i][j][1].toString()+a[i][j][2].toString();
+                }
+              }
+              Mcode.innerHTML += "<br/>";
+            }
+          }		
+        }
+  
+      </script>
+    </body>
+  </html>
