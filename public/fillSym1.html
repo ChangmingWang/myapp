@@ -1,0 +1,283 @@
+<html>
+    <head>
+      <title>
+        fill symbols
+      </title>
+    </head>
+    <body>
+    <canvas id="canvas" width="890" height="640" style="border:1px dashed gray;" ></canvas>
+    <br/>
+    <label style="text-align:left"/>Gen文件1:</label>
+    <input type="file" id="file1" />
+    <input type="button" value="读取" style="margin-left:0px" onclick="assureFile1()" />  
+    <br/>
+    <label style="text-align:left"/>Gen文件2:</label>
+    <input type="file" id="file2" />
+    <input type="button" value="读取" style="margin-left:0px" onclick="assureFile2()" /> 
+    <br/>
+    <label style="text-align:left">LineWidth:</label>
+    <input type="text" id="lineWidth" style="width:40px;" value="0.5">  
+    
+    <label  style="text-align:left">LineColor:</label>
+    <!-- 带值的下拉菜单 -->
+    <select id="lineColor">
+    <option value="rgb(0,0,0)" selected="black">black</option>
+    <option value="rgb(255,0,0)">red</option>
+    <option value="rgb(0,255,0)">green</option>
+    <option value="rgb(0,0,255)">blue</option>
+    </select>
+  
+    <input type="button" value="paint1" onclick="paint1()"/>
+    <input type="button" value="paint2" onclick="paint2()"/>
+    <input type="button" value="fill1" onclick="fill1()"/>
+    <input type="button" value="fill2" onclick="fill2()"/>
+    
+    <input type="button" value="showTxt" style="margin-left:0px" onclick="showText()"/>
+    <div id="result"></div>
+    
+    <br/>
+    <script type="text/javascript">
+      var c = document.getElementById("canvas");
+      var ctx = c.getContext("2d");
+      var width = parseInt(c.width);
+      var height = parseInt(c.height);	
+      
+      var feature_num;
+      var resultStr = "";
+      
+      var map1_poi = new Array();  //存储地图1地物的点数组
+      var map2_poi = new Array();  //存储地图2地物的点数组
+      
+      function assureFile1()
+      {
+        var file = document.getElementById("file1").files[0];
+        if(file!=null)
+        {
+          var reader =new FileReader();
+          reader.readAsText(file);
+          reader.onload=function(e)
+          {
+              var geom1 = this.result;
+            readAndSavePoi(map1_poi,geom1);
+             for(var i=0;i<map1_poi.length;i++)
+            {
+              var  r = map1_poi[i];
+              if(r.constructor == Array)
+              {
+                resultStr += r[0]+","+r[1];
+              }
+              else if(r!=0)
+              {
+                resultStr += r;
+              }
+              resultStr += "<br/>";
+            }         		  
+          }
+        }	  
+      }
+      
+      function assureFile2()
+      {
+        var file = document.getElementById("file2").files[0];
+        if(file!=null)
+        {
+          var reader =new FileReader();
+          reader.readAsText(file);
+          reader.onload=function(e)
+          {
+              var geom1 = this.result;
+            readAndSavePoi(map2_poi,geom1);
+             for(var i=0;i<map2_poi.length;i++)
+            {
+              var  r = map2_poi[i];
+              if(r.constructor == Array)
+              {
+                resultStr += r[0]+","+r[1];
+              }
+              else if(r!=0)
+              {
+                resultStr += r;
+              }
+              resultStr += "<br/>";
+            }         		  
+          }
+        }	  
+      }	
+  
+      //存储地图坐标的函数
+      function readAndSavePoi(map_poi,geom)
+      {
+        var lines = geom.substring(0,geom.length-10);  //存储字符串形式的几何对象
+        var line = new Array();
+        line = lines.split("END\r\n");  //存储字符串形式的线几何对象
+        feature_num = line.length;
+        for(var j=0;j<line.length;j++)
+        {
+          var rows = line[j];
+          var row = new Array();
+          row = rows.split("\r\n");  //存储字符串形式的一行（一对点）
+              
+          var oneOrNot = 1;
+          for(var k=0;k<row.length;k++)
+          {
+            if(row[k].search(",")!=-1)
+            {
+              var points = row[k];
+              var point = new Array();  //存储字符串形式的横或纵坐标，0为x，1为y
+              point = points.split(",");
+                    
+              var xy = new Array();
+              xy.push(parseFloat(point[0]));
+              xy.push(parseFloat(point[1]));
+              map_poi.push(xy);  //存储数字形式的一对点（一个数组）的数组
+            }
+            else
+            {
+              map_poi.push(Number(row[k]));
+            }
+          }
+        }	  
+      }	
+      
+      function paint1()
+      {
+      //ctx.clearRect(0,0,width,height);
+        ctx.beginPath();
+        
+        var lineID = 1;
+         for(var i=0;i<map1_poi.length;i++)
+        {
+          var  r = map1_poi[i];
+          if(r.constructor == Array)
+          {
+            var x = 1+(r[0]-430000)/2;
+            var y = 301-(r[1]-3260000)/2;
+            x = x*7;
+            y = y*7;
+            if(lineID == 1)
+            {
+              ctx.moveTo(x,y);
+              lineID++;
+            }
+            else
+            {
+              ctx.lineTo(x,y);
+            }
+          }
+          else if(r == 0)
+          {
+            lineID = 1; 
+          }
+        }
+        var select = document.getElementById("lineColor");
+        var index = select.selectedIndex;
+              
+        ctx.lineWidth = document.getElementById("lineWidth").value; 
+        ctx.strokeStyle = select.options[index].value;
+        ctx.stroke();	  
+      }
+  
+      function paint2()
+      {
+        ctx.beginPath();
+        
+        var lineID = 1;
+         for(var i=0;i<map2_poi.length;i++)
+        {
+          var  r = map2_poi[i];
+          if(r.constructor == Array)
+          {
+            var x = 1+(r[0]-430000)/2;
+            var y = 301-(r[1]-3260000)/2;
+            x = x*7;
+            y = y*7;
+            if(lineID == 1)
+            {
+              ctx.moveTo(x,y);
+              lineID++;
+            }
+            else
+            {
+              ctx.lineTo(x,y);
+            }
+          }
+          else if(r == 0)
+          {
+            lineID = 1; 
+          }
+        }
+        var select = document.getElementById("lineColor");
+        var index = select.selectedIndex;
+              
+        ctx.lineWidth = document.getElementById("lineWidth").value; 
+        ctx.strokeStyle = select.options[index].value;
+        ctx.stroke();	  
+      }
+      
+      var fill2center = new Array();  //存储放置符号的中心点
+      //用点符号填充地图2
+      function fill2()
+      {
+        var dis = [16,16];  //两种符号间距相同
+        var sym1_poi = [1,1];  //存储填充符号1的中心点数组（䒑）
+        var sym2_poi = [9,9];  //存储填充符号2的点数组（√）
+  
+        var polyx = new Array();
+        var polyy = new Array();
+        
+         for(var i=0;i<map2_poi.length;i++)
+        {
+          var  r = map2_poi[i];
+          if(r.constructor == Array)
+          {
+            var x = 1+(r[0]-430000)/2;
+            var y = 301-(r[1]-3260000)/2;
+            x = x*7;
+            y = y*7;
+            
+            polyx.push(x);
+            polyy.push(y);
+  
+            
+            
+          }
+          else if(r == 0)
+          {
+            lineID = 1;
+            var sort_polyx = polyx.sort(sortNumber);
+            var sort_polyy = polyy.sort(sortNumber);
+            var len = sort_polyx.length;
+            min_x=sort_polyx[0],max_x=sort_polyx[len];
+            min_y=sort_polyy[0],max_y=sort_polyy[len];
+            calculateCenter(min_x,max_x,min_y,max_y);  
+          }
+        }	  
+      }
+  
+      function sortNumber(a,b)
+      {
+        return a - b;
+      }	
+      
+      function calculateCenter(min_x,max_x,min_y,max_y)  //计算中心点
+      {
+        for(var x=0;x<=c.width;x=x+15)
+        {
+          for(var y=0;y<=c.height;y=y+15)
+          {
+            
+          }
+        }
+  
+      }
+      
+      function showText()
+      {
+        var result = document.getElementById("result");
+        result.innerHTML += "There are "+feature_num+" features."+"<br/>";
+        result.innerHTML += resultStr;
+      }
+      
+    </script>
+    </body>
+  </html>
